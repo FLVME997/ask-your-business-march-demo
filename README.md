@@ -1,12 +1,5 @@
-# Ask Your Business - March/April/May Railway Demo
+# Ask Your Business - Review Center Demo
 
-This is the zero-dependency Railway demo showing three anonymized monthly import packages in one app.
+This ultra-simple Railway version adds the browser-based Manual Review & Certification Center.
 
-## Deploy
-
-1. Upload these files to the root of the existing GitHub repository.
-2. Commit changes.
-3. Railway will redeploy automatically from GitHub.
-4. Open the same Railway domain.
-
-No PostgreSQL or environment variables are required yet.
+Progress is saved in browser localStorage only. Export the certified JSON package before clearing browser data. PostgreSQL comes later in Option 2.

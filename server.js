@@ -1,45 +1,5 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-
-const PORT = process.env.PORT || 3000;
-const PUBLIC_DIR = path.join(__dirname, 'public');
-
-const types = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.pdf': 'application/pdf',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
-};
-
-function send(res, status, body, type='text/plain; charset=utf-8') {
-  res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
-  res.end(body);
-}
-
-const server = http.createServer((req, res) => {
-  try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    if (url.pathname === '/health') {
-      return send(res, 200, JSON.stringify({ ok: true, app: 'Ask Your Business Multi-Month Import Demo' }), 'application/json; charset=utf-8');
-    }
-    let safePath = decodeURIComponent(url.pathname);
-    if (safePath === '/') safePath = '/index.html';
-    safePath = safePath.replace(/\.\./g, '');
-    const filePath = path.join(PUBLIC_DIR, safePath);
-    if (!filePath.startsWith(PUBLIC_DIR)) return send(res, 403, 'Forbidden');
-    fs.readFile(filePath, (err, content) => {
-      if (err) return send(res, 404, 'Not found');
-      send(res, 200, content, types[path.extname(filePath).toLowerCase()] || 'application/octet-stream');
-    });
-  } catch (error) {
-    send(res, 500, 'Server error');
-  }
-});
-
-server.listen(PORT, () => console.log(`Ask Your Business multi-month demo running on port ${PORT}`));
+const http=require('http'),fs=require('fs'),path=require('path');
+const PORT=process.env.PORT||3000, PUBLIC_DIR=path.join(__dirname,'public');
+const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.pdf':'application/pdf'};
+function safeJoin(base,target){const p=path.normalize(path.join(base,target));return p.startsWith(base)?p:null;}
+http.createServer((req,res)=>{const url=new URL(req.url,`http://${req.headers.host}`);if(url.pathname==='/health'){res.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify({ok:true,app:'Ask Your Business Review Center Demo',version:'0.3.0'}));return;}let requested=decodeURIComponent(url.pathname);if(requested==='/')requested='/index.html';const fp=safeJoin(PUBLIC_DIR,requested);if(!fp){res.writeHead(403);res.end('Forbidden');return;}fs.readFile(fp,(err,data)=>{if(err){res.writeHead(404,{'Content-Type':'text/plain; charset=utf-8'});res.end('Not found');return;}res.writeHead(200,{'Content-Type':MIME[path.extname(fp).toLowerCase()]||'application/octet-stream'});res.end(data);});}).listen(PORT,()=>console.log(`Review Center Demo running on port ${PORT}`));

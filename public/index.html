@@ -3,166 +3,54 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ask Your Business - Multi-Month Import Demo</title>
-  <style>
-    :root { --bg:#0f172a; --panel:#111827; --panel2:#172033; --text:#e5e7eb; --muted:#94a3b8; --line:#263449; --accent:#38bdf8; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --purple:#a78bfa; }
-    *{box-sizing:border-box} body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text)} a{color:var(--accent)}
-    header{padding:22px 28px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#111827,#0f172a);position:sticky;top:0;z-index:5}
-    h1{margin:0;font-size:26px;letter-spacing:-.03em} h2{margin:0 0 14px;font-size:21px} h3{margin:0 0 10px;font-size:16px} p{color:var(--muted);line-height:1.55}.sub{color:var(--muted);margin-top:6px}.topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.select-wrap{display:flex;gap:8px;align-items:center;color:var(--muted)}
-    select,input,textarea{background:#0b1220;border:1px solid var(--line);color:var(--text);border-radius:12px;padding:10px 12px;font:inherit}.layout{display:grid;grid-template-columns:265px 1fr;min-height:calc(100vh - 86px)}
-    nav{border-right:1px solid var(--line);padding:18px;background:#0b1120;position:sticky;top:86px;height:calc(100vh - 86px);overflow:auto}nav button{width:100%;text-align:left;border:1px solid transparent;background:transparent;color:var(--muted);padding:12px;border-radius:10px;cursor:pointer;font-size:14px;margin-bottom:6px}nav button.active,nav button:hover{color:var(--text);border-color:var(--line);background:#111827}
-    main{padding:24px;overflow:auto}.section{display:none}.section.active{display:block}.grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:18px 0}.grid.two{grid-template-columns:repeat(2,minmax(240px,1fr))}.grid.three{grid-template-columns:repeat(3,minmax(200px,1fr))}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.15)}
-    .metric-label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.metric{font-size:24px;font-weight:800;margin-top:8px}.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid var(--line);color:var(--text);background:#0b1220}.badge.good{color:#bbf7d0;border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.1)}.badge.warn{color:#fde68a;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.1)}.badge.bad{color:#fecaca;border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.1)}.badge.purple{color:#ddd6fe;border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.1)}
-    .notice{border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.08);border-radius:14px;padding:14px 16px;color:#fde68a;margin:16px 0}.success{border:1px solid rgba(34,197,94,.35);background:rgba(34,197,94,.08);border-radius:14px;padding:14px 16px;color:#bbf7d0;margin:16px 0}.table-wrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:var(--panel);max-height:560px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{position:sticky;top:0;background:#172033;color:#cbd5e1;text-align:left;z-index:1}tr:hover td{background:#0f172a}.controls{display:grid;grid-template-columns:1fr 220px 220px;gap:10px;margin:14px 0}.btn{border:1px solid var(--line);background:#172033;color:var(--text);padding:11px 14px;border-radius:12px;cursor:pointer;font-weight:700}.btn.primary{background:var(--accent);color:#082f49;border-color:var(--accent)}.btn.good{background:var(--good);color:#052e16;border-color:var(--good)}.btn.warn{background:var(--warn);color:#451a03;border-color:var(--warn)}.answer{background:#0b1220;border:1px solid var(--line);border-radius:14px;padding:16px;white-space:pre-wrap;line-height:1.5}.small{font-size:12px;color:var(--muted)}.list{margin:0;padding-left:18px;color:var(--muted);line-height:1.7}.pdf-frame{width:100%;height:78vh;border:1px solid var(--line);border-radius:14px;background:white}.spark{height:10px;background:#0b1220;border-radius:99px;overflow:hidden;border:1px solid var(--line)}.spark>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--good))}.kpi-row{display:grid;grid-template-columns:1fr auto;gap:8px;color:var(--muted);padding:7px 0;border-bottom:1px solid rgba(148,163,184,.12)}.kpi-row:last-child{border-bottom:0}.code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color:#cbd5e1;background:#0b1220;border:1px solid var(--line);border-radius:8px;padding:2px 6px}.pdf-links{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
-    @media(max-width:950px){.layout{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.grid,.grid.two,.grid.three,.controls{grid-template-columns:1fr}.topbar{align-items:flex-start}.select-wrap{width:100%;align-items:flex-start;flex-direction:column}.select-wrap select{width:100%}}
-  </style>
+  <title>Ask Your Business - Review Center Demo</title>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 <header>
-  <div class="topbar">
+  <div class="brand">
     <div>
-      <h1>Ask Your Business - Multi-Month Import Demo</h1>
-      <div class="sub">March, April, and May 2020 in one Railway app. No database yet. JSON-only demo data.</div>
+      <h1>Ask Your Business - Review & Certification Center</h1>
+      <div class="subtitle">Option 1 implementation: click a review item, open a popup, edit/certify/reject/escalate it, update the queue, and export a certified JSON package for later PostgreSQL import.</div>
     </div>
-    <div class="select-wrap">
-      <label for="monthSelect">View:</label>
-      <select id="monthSelect"><option value="all">All months</option></select>
-    </div>
+    <div class="badge" id="badge">Loading...</div>
   </div>
 </header>
-<div class="layout">
-  <nav>
-    <button class="tab active" data-section="overview">1. Combined Overview</button>
-    <button class="tab" data-section="learning">2. Template Learning</button>
-    <button class="tab" data-section="transactions">3. Staged Transactions</button>
-    <button class="tab" data-section="mapping">4. Mapping Review</button>
-    <button class="tab" data-section="validation">5. Validation Results</button>
-    <button class="tab" data-section="review">6. Manual Review Queue</button>
-    <button class="tab" data-section="certify">7. Certify Imports</button>
-    <button class="tab" data-section="dashboard">8. Owner Dashboard</button>
-    <button class="tab" data-section="assistant">9. Finance Assistant</button>
-    <button class="tab" data-section="reports">10. PDF Reports</button>
-    <button class="tab" data-section="railway">Update Instructions</button>
+<main class="wrap">
+  <div class="notice">Demo storage warning: review decisions are saved in this browser only. Use <strong>Export certified package</strong> before clearing browser data or switching computers.</div>
+  <div class="selector">
+    <strong>Month view:</strong>
+    <select id="monthSelect"></select>
+    <span class="mini">Use “All months” for the whole queue, or choose one month for batch certification.</span>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-section="overview">Overview</button>
+    <button class="tab" data-section="review">Review Center</button>
+    <button class="tab" data-section="transactions">Transactions</button>
+    <button class="tab" data-section="mapping">Mapping</button>
+    <button class="tab" data-section="validation">Validation</button>
+    <button class="tab" data-section="certification">Certification</button>
+    <button class="tab" data-section="assistant">Assistant</button>
+    <button class="tab" data-section="reports">Reports</button>
   </nav>
-  <main>
-    <section id="overview" class="section active">
-      <h2>1. Combined Overview</h2>
-      <div class="notice"><strong>Current stage:</strong> this is still a safe Railway proof-of-concept. It uses anonymized JSON files inside the app, not real PostgreSQL storage yet. Do not upload raw private company files to GitHub at this stage.</div>
-      <div id="scopeStatus"></div>
-      <div class="grid" id="summaryCards"></div>
-      <div class="grid two">
-        <div class="card"><h3>Month-by-month totals</h3><div class="table-wrap"><table id="monthTotalsTable"></table></div></div>
-        <div class="card"><h3>What this proves</h3><ul class="list"><li>March created the first company-specific import template.</li><li>April reused the template and reduced manual review.</li><li>May reused it even more strongly, proving repeat-month automation.</li><li>The app can show data quality, exceptions, mappings, validation, and certified-data dashboards from one page.</li></ul></div>
-      </div>
-    </section>
-
-    <section id="learning" class="section">
-      <h2>2. Template Learning</h2>
-      <p>This is the core product idea: first month needs more manual review; future months become faster because mappings and structure are reused.</p>
-      <div class="grid three" id="learningCards"></div>
-      <div class="card"><h3>Template learning story</h3><div class="table-wrap"><table id="learningTable"></table></div></div>
-    </section>
-
-    <section id="transactions" class="section">
-      <h2>3. Staged Transactions</h2>
-      <p>These rows are anonymized and normalized from the three monthly workbooks. They are staged/candidate data until certified.</p>
-      <div class="controls"><input id="txSearch" placeholder="Search category, party, sheet, purpose..."/><select id="txDirection"><option value="">All directions</option><option>inflow</option><option>outflow</option></select><select id="txReview"><option value="">All review statuses</option><option>ready_for_certification</option><option>needs_manual_review</option></select></div>
-      <div class="table-wrap"><table id="transactionsTable"></table></div><p class="small" id="txCount"></p>
-    </section>
-
-    <section id="mapping" class="section">
-      <h2>4. Mapping Review</h2>
-      <p>Mappings translate company labels into our standard database categories. This is where future automation is created.</p>
-      <div class="table-wrap"><table id="mappingTable"></table></div>
-    </section>
-
-    <section id="validation" class="section">
-      <h2>5. Validation Results</h2>
-      <p>Validation checks catch formula problems, balance mismatches, and incomplete data before anything enters the official database.</p>
-      <div class="table-wrap"><table id="validationTable"></table></div>
-    </section>
-
-    <section id="review" class="section">
-      <h2>6. Manual Review Queue</h2>
-      <p>The reviewer should focus on exceptions, not every row.</p>
-      <div class="controls"><input id="reviewSearch" placeholder="Search issue, details, suggested resolution..."/><select id="reviewPriority"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select><select id="reviewType"><option value="">All types</option><option>validation</option><option>transaction</option><option>mapping</option></select></div>
-      <div class="table-wrap"><table id="reviewTable"></table></div><p class="small" id="reviewCount"></p>
-    </section>
-
-    <section id="certify" class="section">
-      <h2>7. Certify Imports</h2>
-      <div class="notice">Demo-only: certification is saved in your browser local storage. In the real app, this becomes an import certification record in PostgreSQL with user, timestamp, source file, validation results, and audit history.</div>
-      <div class="grid three" id="certifyCards"></div>
-      <div class="card"><h3>Actions</h3><p>Use this to simulate the owner/accountant certification step.</p><button class="btn good" id="certifyBtn">Certify current view in demo</button> <button class="btn" id="resetCertBtn">Reset current certification</button></div>
-    </section>
-
-    <section id="dashboard" class="section">
-      <h2>8. Owner Dashboard</h2>
-      <div id="dashWarning"></div><div class="grid" id="dashboardCards"></div>
-      <div class="grid two"><div class="card"><h3>Top inflow categories</h3><div class="table-wrap"><table id="topInflowTable"></table></div></div><div class="card"><h3>Top outflow categories</h3><div class="table-wrap"><table id="topOutflowTable"></table></div></div></div>
-    </section>
-
-    <section id="assistant" class="section">
-      <h2>9. Finance Assistant</h2>
-      <p>This is still rule-based, not paid AI. It answers from the loaded JSON data and states limitations.</p>
-      <textarea id="question" placeholder="Ask: What happened over all months? Which month had highest cash? What needs review? What are validation problems? How did template reuse improve?"></textarea><br/><br/>
-      <button class="btn primary" id="askBtn">Ask from loaded import data</button>
-      <div class="answer" id="answerBox">Ask a question to see an evidence-backed demo answer.</div>
-    </section>
-
-    <section id="reports" class="section">
-      <h2>10. PDF Reports</h2><p>These are the human import review reports. The app uses JSON for data, and the PDFs are for manual review/evidence.</p>
-      <div class="pdf-links" id="pdfLinks"></div><iframe class="pdf-frame" id="pdfFrame"></iframe>
-    </section>
-
-    <section id="railway" class="section">
-      <h2>How to update Railway with April and May</h2>
-      <div class="card"><ol class="list">
-        <li>Download the new combined ZIP from ChatGPT.</li>
-        <li>Unzip it on your computer.</li>
-        <li>Open your existing GitHub repository: <span class="code">ask-your-business-march-demo</span>.</li>
-        <li>Upload the new files directly at the root of the repository. Let GitHub replace existing files when names match.</li>
-        <li>Commit the changes with a message like <span class="code">Add April and May import data</span>.</li>
-        <li>Railway is connected to GitHub, so a new commit should trigger a new deployment automatically.</li>
-        <li>Open the same Railway domain after the deploy finishes. The page should now show March, April, May, and All months.</li>
-      </ol></div>
-    </section>
-  </main>
+  <section id="overview" class="section active"></section>
+  <section id="review" class="section"></section>
+  <section id="transactions" class="section"></section>
+  <section id="mapping" class="section"></section>
+  <section id="validation" class="section"></section>
+  <section id="certification" class="section"></section>
+  <section id="assistant" class="section"></section>
+  <section id="reports" class="section"></section>
+</main>
+<div class="modal-backdrop" id="reviewModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div><h2 id="modalTitle">Review item</h2><div class="muted" id="modalSubtitle"></div></div>
+      <button class="xbtn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
 </div>
-<script>
-let APP=null; let current='all';
-const fmt = new Intl.NumberFormat('en-US',{maximumFractionDigits:2});
-const money=n=>`${fmt.format(Number(n||0))} RSD`;
-const num=n=>fmt.format(Number(n||0));
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function badge(t,type=''){return `<span class="badge ${type}">${esc(t)}</span>`}
-function certKey(scope){return `ayb-cert-${scope}`}
-function isCertified(scope){return localStorage.getItem(certKey(scope))==='yes'}
-function setCertified(scope,v){v?localStorage.setItem(certKey(scope),'yes'):localStorage.removeItem(certKey(scope));renderAll()}
-function selectedMonths(){return current==='all'?APP.months:[APP.months.find(m=>m.key===current)].filter(Boolean)}
-function combinedSummary(ms){
- const first=ms[0], last=ms[ms.length-1];
- return {opening_position:first?.summary.opening_position||0, closing_position:last?.summary.closing_position||0, total_inflows:ms.reduce((a,m)=>a+m.summary.total_inflows,0), total_outflows:ms.reduce((a,m)=>a+m.summary.total_outflows,0), net_movement:ms.reduce((a,m)=>a+m.summary.net_movement,0), transactions_extracted:ms.reduce((a,m)=>a+m.summary.transactions_extracted,0), rows_ready:ms.reduce((a,m)=>a+m.summary.rows_ready,0), rows_needing_review:ms.reduce((a,m)=>a+m.summary.rows_needing_review,0), manual_review_items:ms.reduce((a,m)=>a+m.summary.manual_review_items,0), data_quality_score:ms.length?ms.reduce((a,m)=>a+m.summary.data_quality_score,0)/ms.length:0, validation_fail:ms.reduce((a,m)=>a+m.summary.validation_fail,0), validation_review:ms.reduce((a,m)=>a+m.summary.validation_review,0)}
-}
-function flatten(field){return selectedMonths().flatMap(m=>(m[field]||[]).map(x=>({...x,_month:m.label,_key:m.key})))}
-function card(label,value,sub='',type=''){return `<div class="card"><div class="metric-label">${esc(label)}</div><div class="metric">${esc(value)}</div>${sub?`<p class="small">${esc(sub)}</p>`:''}${type?`<div style="margin-top:8px">${badge(type,type==='Certified'?'good':'warn')}</div>`:''}</div>`}
-function renderTable(id, rows, cols){const el=document.getElementById(id); if(!rows.length){el.innerHTML='<tr><td>No rows.</td></tr>'; return;} el.innerHTML=`<thead><tr>${cols.map(c=>`<th>${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${c.render?c.render(r):esc(r[c.key])}</td>`).join('')}</tr>`).join('')}</tbody>`}
-function renderOverview(){const ms=selectedMonths(); const s=combinedSummary(ms); const scope=current==='all'?'All months':ms[0]?.label; document.getElementById('scopeStatus').innerHTML = isCertified(current)?`<div class="success">${esc(scope)} is certified in this browser demo.</div>`:`<div class="notice">${esc(scope)} still requires manual review/certification before being treated as official data.</div>`; document.getElementById('summaryCards').innerHTML = card('Opening position',money(s.opening_position),'Opening balance for selected scope')+card('Inflows',money(s.total_inflows),'Total extracted inflows')+card('Outflows',money(s.total_outflows),'Total extracted outflows')+card('Closing position',money(s.closing_position),'Closing balance for selected scope')+card('Net movement',money(s.net_movement),s.net_movement>=0?'Positive cash movement':'Negative cash movement')+card('Transactions',num(s.transactions_extracted),`${num(s.rows_needing_review)} rows need review`)+card('Manual review items',num(s.manual_review_items),'Exceptions requiring attention')+card('Avg data quality',`${s.data_quality_score.toFixed(1)} / 100`,'Demo-calculated quality score'); renderTable('monthTotalsTable', APP.months.map(m=>({month:m.label,...m.summary})), [{label:'Month',key:'month'},{label:'Opening',render:r=>money(r.opening_position)},{label:'Inflows',render:r=>money(r.total_inflows)},{label:'Outflows',render:r=>money(r.total_outflows)},{label:'Net',render:r=>money(r.net_movement)},{label:'Closing',render:r=>money(r.closing_position)},{label:'Quality',render:r=>`${Number(r.data_quality_score||0).toFixed(1)}`}]);}
-function renderLearning(){const rows=APP.combined.template_learning_story; const cards=APP.months.map(m=>card(m.label, `${m.summary.template_reuse_rate_percent || 'Base'}${m.summary.template_reuse_rate_percent?'%':''}`, `Category reuse: ${m.summary.category_reuse_rate_percent||'Base'}${m.summary.category_reuse_rate_percent?'%':''}`)).join(''); document.getElementById('learningCards').innerHTML=cards; renderTable('learningTable', rows, [{label:'Month',key:'month'},{label:'Result',key:'result'},{label:'Reuse',key:'reuse'}]);}
-function renderTransactions(){let rows=flatten('transactions'); const q=document.getElementById('txSearch').value.toLowerCase(); const dir=document.getElementById('txDirection').value; const rev=document.getElementById('txReview').value; rows=rows.filter(r=>(!dir||r.direction===dir)&&(!rev||r.review_status===rev)&&(!q||[r.raw_category,r.suggested_category,r.counterparty,r.description,r.source_sheet,r._month].join(' ').toLowerCase().includes(q))); document.getElementById('txCount').textContent=`Showing ${rows.length} rows.`; renderTable('transactionsTable', rows.slice(0,500), [{label:'Month',key:'_month'},{label:'Date',key:'date'},{label:'Direction',render:r=>badge(r.direction,r.direction==='inflow'?'good':'warn')},{label:'Method',key:'payment_method'},{label:'Amount',render:r=>money(r.amount_rsd)},{label:'Raw category',key:'raw_category'},{label:'Suggested category',key:'suggested_category'},{label:'Party',key:'counterparty'},{label:'Source',key:'source_reference'},{label:'Status',render:r=>badge(r.review_status,r.review_status==='ready_for_certification'?'good':'warn')}]);}
-function renderMappings(){let rows=flatten('mapping_suggestions'); renderTable('mappingTable', rows, [{label:'Month',key:'_month'},{label:'Direction',key:'direction'},{label:'Raw category',key:'raw_category'},{label:'Suggested category',key:'suggested_category'},{label:'Rows',key:'rows_affected'},{label:'Needs review',key:'needs_review_rows'},{label:'Total',render:r=>money(r.total_rsd)},{label:'Confidence',key:'confidence'},{label:'Source',key:'mapping_source'}]);}
-function renderValidation(){let rows=flatten('validation_results'); renderTable('validationTable', rows, [{label:'Month',key:'_month'},{label:'Check',key:'check_name'},{label:'Status',render:r=>badge(r.status,r.status==='PASS'?'good':(r.status==='FAIL'?'bad':'warn'))},{label:'Severity',key:'severity'},{label:'Expected',key:'expected'},{label:'Actual',key:'actual'},{label:'Difference',key:'difference'},{label:'Explanation',key:'explanation'}]);}
-function renderReview(){let rows=flatten('manual_review_queue'); const q=document.getElementById('reviewSearch').value.toLowerCase(); const pr=document.getElementById('reviewPriority').value.toLowerCase(); const ty=document.getElementById('reviewType').value.toLowerCase(); rows=rows.filter(r=>(!pr||String(r.priority).toLowerCase()===pr)&&(!ty||String(r.item_type).toLowerCase().includes(ty))&&(!q||[r.issue,r.details,r.suggested_resolution,r.source_reference,r._month].join(' ').toLowerCase().includes(q))); document.getElementById('reviewCount').textContent=`Showing ${rows.length} review items.`; renderTable('reviewTable', rows, [{label:'Month',key:'_month'},{label:'Priority',render:r=>badge(r.priority, String(r.priority).toLowerCase()==='high'?'bad':String(r.priority).toLowerCase()==='medium'?'warn':'')},{label:'Type',key:'item_type'},{label:'Issue',key:'issue'},{label:'Details',key:'details'},{label:'Suggested action',key:'suggested_resolution'},{label:'Source',key:'source_reference'}]);}
-function renderCertify(){const ms=selectedMonths(); const s=combinedSummary(ms); const scope=current==='all'?'All months':ms[0]?.label; document.getElementById('certifyCards').innerHTML=card('Scope',scope,'Current certification scope',isCertified(current)?'Certified':'Needs review')+card('Rows ready',num(s.rows_ready),'Candidate approved rows')+card('Rows needing review',num(s.rows_needing_review),'Must be reviewed')+card('Validation failures',num(s.validation_fail),'Resolve before official import')+card('Review items',num(s.manual_review_items),'Exception queue')+card('Data quality',`${s.data_quality_score.toFixed(1)} / 100`,'Quality score');}
-function topCategories(direction){const map={}; flatten('transactions').filter(t=>t.direction===direction).forEach(t=>{const k=t.suggested_category||t.raw_category||'Unmapped'; map[k]=(map[k]||0)+Number(t.amount_rsd||0)}); return Object.entries(map).map(([category,total])=>({category,total})).sort((a,b)=>b.total-a.total).slice(0,12)}
-function renderDashboard(){const s=combinedSummary(selectedMonths()); document.getElementById('dashWarning').innerHTML = isCertified(current)?`<div class="success">Dashboard is using data certified in this browser demo.</div>`:`<div class="notice">Dashboard uses staged data for demonstration. Official app should only use certified PostgreSQL records.</div>`; document.getElementById('dashboardCards').innerHTML=card('Cash position',money(s.closing_position),'Closing position')+card('Total inflows',money(s.total_inflows),'Selected scope')+card('Total outflows',money(s.total_outflows),'Selected scope')+card('Net movement',money(s.net_movement),s.net_movement>=0?'Cash increased':'Cash decreased')+card('Transactions',num(s.transactions_extracted),'Extracted rows')+card('Manual review',num(s.manual_review_items),'Open review items')+card('Validation failures',num(s.validation_fail),'Potential blocking issues')+card('Data quality',`${s.data_quality_score.toFixed(1)} / 100`,'Average score'); renderTable('topInflowTable', topCategories('inflow'), [{label:'Category',key:'category'},{label:'Total',render:r=>money(r.total)}]); renderTable('topOutflowTable', topCategories('outflow'), [{label:'Category',key:'category'},{label:'Total',render:r=>money(r.total)}]);}
-function renderReports(){const links=APP.months.map(m=>`<a class="btn" href="${m.report_pdf}" target="_blank">${m.label} PDF</a>`).join(''); document.getElementById('pdfLinks').innerHTML=links; const ms=selectedMonths(); document.getElementById('pdfFrame').src=(ms[0]||APP.months[0]).report_pdf;}
-function answer(q){const s=combinedSummary(selectedMonths()); const scope=current==='all'?'March-April-May 2020':selectedMonths()[0]?.label; const lower=q.toLowerCase(); let lines=[]; lines.push(`Scope used: ${scope}`); lines.push(`Reliability: ${isCertified(current)?'Certified in demo browser':'Not certified yet - staged import data only'}`); lines.push(''); if(lower.includes('template')||lower.includes('reuse')||lower.includes('automat')){lines.push('Template learning result:'); APP.months.forEach(m=>lines.push(`- ${m.label}: row reuse ${m.summary.template_reuse_rate_percent || 'baseline'}${m.summary.template_reuse_rate_percent?'%':''}, category reuse ${m.summary.category_reuse_rate_percent || 'baseline'}${m.summary.category_reuse_rate_percent?'%':''}, new categories ${m.summary.new_category_pairs}.`));} else if(lower.includes('review')||lower.includes('issue')||lower.includes('problem')||lower.includes('validation')){lines.push(`Manual review items: ${num(s.manual_review_items)}.`); lines.push(`Validation failures: ${num(s.validation_fail)}. Validation warnings/review items: ${num(s.validation_review)}.`); selectedMonths().forEach(m=>lines.push(`- ${m.label}: ${m.summary.manual_review_items} review items, ${m.summary.validation_fail} validation failures, ${m.summary.rows_needing_review} transaction rows needing review.`));} else if(lower.includes('cash')||lower.includes('money')||lower.includes('position')){lines.push(`Opening position: ${money(s.opening_position)}.`); lines.push(`Total inflows: ${money(s.total_inflows)}.`); lines.push(`Total outflows: ${money(s.total_outflows)}.`); lines.push(`Net movement: ${money(s.net_movement)}.`); lines.push(`Closing position: ${money(s.closing_position)}.`);} else if(lower.includes('best')||lower.includes('highest')||lower.includes('month')){const byNet=APP.months.map(m=>({month:m.label,net:m.summary.net_movement,close:m.summary.closing_position,quality:m.summary.data_quality_score})).sort((a,b)=>b.net-a.net); lines.push(`Highest net cash movement: ${byNet[0].month} with ${money(byNet[0].net)}.`); lines.push(`Lowest net cash movement: ${byNet[byNet.length-1].month} with ${money(byNet[byNet.length-1].net)}.`); APP.months.forEach(m=>lines.push(`- ${m.label}: net ${money(m.summary.net_movement)}, closing ${money(m.summary.closing_position)}, quality ${m.summary.data_quality_score}.`));} else {lines.push(`Summary: ${scope} has ${num(s.transactions_extracted)} extracted transactions, total inflows of ${money(s.total_inflows)}, total outflows of ${money(s.total_outflows)}, and a net movement of ${money(s.net_movement)}.`); lines.push(`There are ${num(s.manual_review_items)} manual review items and ${num(s.validation_fail)} validation failures.`);}
- lines.push(''); lines.push('Limitations: this demo uses anonymized JSON data inside Railway. It is not yet a PostgreSQL-backed official accounting database, and original Excel/PDF files are not being parsed inside Railway yet.'); lines.push('Recommended next step: resolve/certify review items, then move this JSON structure into PostgreSQL import_batch, staged_transactions, mapping_rules, validation_results, and import_certifications tables.'); return lines.join('\n');}
-function renderAssistant(){document.getElementById('answerBox').textContent='Ask a question to see an evidence-backed demo answer.'}
-function renderAll(){renderOverview();renderLearning();renderTransactions();renderMappings();renderValidation();renderReview();renderCertify();renderDashboard();renderReports();}
-function initEvents(){document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.section).classList.add('active')})); document.getElementById('monthSelect').addEventListener('change',e=>{current=e.target.value;renderAll()}); ['txSearch','txDirection','txReview'].forEach(id=>document.getElementById(id).addEventListener('input',renderTransactions)); ['reviewSearch','reviewPriority','reviewType'].forEach(id=>document.getElementById(id).addEventListener('input',renderReview)); document.getElementById('certifyBtn').addEventListener('click',()=>setCertified(current,true)); document.getElementById('resetCertBtn').addEventListener('click',()=>setCertified(current,false)); document.getElementById('askBtn').addEventListener('click',()=>{document.getElementById('answerBox').textContent=answer(document.getElementById('question').value||'summary')});}
-fetch('/data/university_2020_import_packages.json').then(r=>r.json()).then(data=>{APP=data; const sel=document.getElementById('monthSelect'); APP.months.forEach(m=>{const o=document.createElement('option');o.value=m.key;o.textContent=m.label;sel.appendChild(o)}); initEvents(); renderAll();}).catch(err=>{document.body.innerHTML='<pre style="padding:24px;color:#fecaca">Could not load import package JSON: '+err+'</pre>'});
-</script>
+<script src="/app.js"></script>
 </body>
 </html>
