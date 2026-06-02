@@ -1,5 +1,3 @@
-# Ask Your Business - Review Center Demo
+Ask Your Business Review Center v0.4
 
-This ultra-simple Railway version adds the browser-based Manual Review & Certification Center.
-
-Progress is saved in browser localStorage only. Export the certified JSON package before clearing browser data. PostgreSQL comes later in Option 2.
+Adds streamlined review areas and editable validation/control issue forms for items with no direct transaction linked. Saves locally in browser and exports certified JSON.
