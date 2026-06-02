@@ -1,31 +1,12 @@
-# Ask Your Business - March Import Demo
+# Ask Your Business - March/April/May Railway Demo
 
-This is an ultra-simple Railway demo. It has no npm dependencies and no database yet.
+This is the zero-dependency Railway demo showing three anonymized monthly import packages in one app.
 
-## What it shows
+## Deploy
 
-- March 2020 anonymized import package
-- Company data intake workflow
-- Staged transactions
-- Mapping review
-- Validation results
-- Manual review queue
-- Simulated import certification
-- Rule-based finance assistant using local JSON data
+1. Upload these files to the root of the existing GitHub repository.
+2. Commit changes.
+3. Railway will redeploy automatically from GitHub.
+4. Open the same Railway domain.
 
-## Important
-
-Do not upload real company data to this demo. It is for proof-of-concept only.
-
-## Railway steps
-
-1. Create a new GitHub repo.
-2. Upload these files at the top/root level of the repo.
-3. In Railway, create a new project from the GitHub repo.
-4. Leave root directory blank.
-5. Railway should detect the Dockerfile.
-6. Generate a public domain after deployment succeeds.
-
-## Health check
-
-Open `/health` on your Railway URL.
+No PostgreSQL or environment variables are required yet.
