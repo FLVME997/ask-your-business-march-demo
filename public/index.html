@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ask Your Business - March 2020 Import Demo</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel2: #182235;
+      --card: #1f2937;
+      --line: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --white: #ffffff;
+      --shadow: 0 18px 60px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: linear-gradient(135deg, #0f172a, #111827 45%, #1e1b4b); color: var(--text); font-family: Arial, Helvetica, sans-serif; }
+    a { color: var(--accent); }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 280px 1fr; }
+    aside { border-right: 1px solid rgba(255,255,255,.1); background: rgba(15,23,42,.88); padding: 24px 18px; position: sticky; top: 0; height: 100vh; }
+    main { padding: 28px; }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+    .logo { width: 42px; height: 42px; border-radius: 14px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: grid; place-items: center; font-weight: 900; }
+    h1, h2, h3 { margin: 0; }
+    h1 { font-size: 28px; letter-spacing: -0.04em; }
+    h2 { font-size: 24px; margin-bottom: 10px; }
+    h3 { font-size: 17px; margin-bottom: 12px; }
+    p { color: var(--muted); line-height: 1.55; }
+    .small { font-size: 13px; color: var(--muted); }
+    .nav button { width: 100%; border: 1px solid transparent; background: transparent; color: var(--muted); text-align: left; padding: 12px 13px; border-radius: 12px; cursor: pointer; font-size: 15px; margin-bottom: 4px; }
+    .nav button.active, .nav button:hover { background: rgba(56,189,248,.13); color: var(--text); border-color: rgba(56,189,248,.25); }
+    .notice { margin-top: 18px; padding: 14px; border: 1px solid rgba(245,158,11,.35); background: rgba(245,158,11,.08); border-radius: 14px; color: #fde68a; font-size: 13px; line-height: 1.45; }
+    .topbar { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 24px; }
+    .pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); color: var(--muted); font-size: 13px; margin: 4px 4px 0 0; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); display: inline-block; }
+    .grid { display: grid; gap: 16px; }
+    .grid.cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.two { grid-template-columns: 1fr 1fr; }
+    .card { background: rgba(17,24,39,.82); border: 1px solid rgba(255,255,255,.1); box-shadow: var(--shadow); border-radius: 18px; padding: 18px; }
+    .metric { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; margin-top: 6px; }
+    .label { color: var(--muted); font-size: 13px; }
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    button.primary, a.primary, button.secondary { border: 0; border-radius: 12px; padding: 11px 14px; cursor: pointer; color: #04111c; background: var(--accent); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+    button.secondary, a.secondary { color: var(--text); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); text-decoration: none; border-radius: 12px; padding: 11px 14px; display: inline-flex; }
+    section { display: none; }
+    section.active { display: block; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,.09); vertical-align: top; }
+    th { text-align: left; color: #cbd5e1; background: rgba(255,255,255,.05); position: sticky; top: 0; }
+    td { color: #e5e7eb; }
+    .table-wrap { overflow: auto; max-height: 540px; border: 1px solid rgba(255,255,255,.09); border-radius: 14px; }
+    .badge { padding: 4px 7px; border-radius: 999px; font-size: 12px; white-space: nowrap; display: inline-block; }
+    .badge.pass { background: rgba(34,197,94,.12); color: #86efac; border: 1px solid rgba(34,197,94,.25); }
+    .badge.review, .badge.warning { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+    .badge.fail, .badge.critical { background: rgba(239,68,68,.12); color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
+    .badge.info { background: rgba(56,189,248,.12); color: #7dd3fc; border: 1px solid rgba(56,189,248,.25); }
+    input, textarea, select { width: 100%; background: rgba(255,255,255,.07); color: var(--text); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 12px; }
+    textarea { min-height: 120px; }
+    .chat { display: grid; gap: 12px; }
+    .bubble { padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.09); }
+    .bubble.assistant { background: rgba(56,189,248,.1); border-color: rgba(56,189,248,.2); }
+    .steps { counter-reset: steps; display: grid; gap: 12px; }
+    .step { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 14px; border-radius: 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); }
+    .step:before { counter-increment: steps; content: counter(steps); width: 34px; height: 34px; border-radius: 50%; background: rgba(56,189,248,.18); display: grid; place-items: center; color: #7dd3fc; font-weight: 800; }
+    .progress { height: 10px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; }
+    .progress span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0%; }
+    @media (max-width: 1000px) { .app { grid-template-columns: 1fr; } aside { position: relative; height: auto; } .grid.cards, .grid.two { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <div class="logo">AYB</div>
+        <div>
+          <h1>Ask Your Business</h1>
+          <div class="small">March 2020 import demo</div>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="active" data-view="overview">1. Overview</button>
+        <button data-view="intake">2. Intake Workflow</button>
+        <button data-view="transactions">3. Staged Transactions</button>
+        <button data-view="mappings">4. Mapping Review</button>
+        <button data-view="validation">5. Validation Results</button>
+        <button data-view="review">6. Manual Review Queue</button>
+        <button data-view="certify">7. Certify Import</button>
+        <button data-view="assistant">8. Finance Assistant</button>
+      </div>
+      <div class="notice">
+        Demo mode: this uses anonymized March 2020 data loaded from JSON. It is not connected to PostgreSQL yet. Do not upload real company data here.
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <h2 id="page-title">Overview</h2>
+          <p id="page-subtitle">A Railway-safe demo of the data intake and certification process.</p>
+          <div>
+            <span class="pill"><span class="dot"></span><span id="status-pill">Loading data...</span></span>
+            <span class="pill" id="period-pill">Period</span>
+            <span class="pill" id="company-pill">Company</span>
+          </div>
+        </div>
+        <div class="btns">
+          <a class="secondary" href="/reports/University_March_2020_Import_Review_Report.pdf" target="_blank">Open PDF report</a>
+          <a class="secondary" href="/data/march_2020_import_package.json" target="_blank">Open JSON data</a>
+        </div>
+      </div>
+
+      <section id="overview" class="active">
+        <div class="grid cards">
+          <div class="card"><div class="label">Opening position</div><div class="metric" id="opening">—</div><div class="small">RSD equivalent</div></div>
+          <div class="card"><div class="label">Total inflows</div><div class="metric good" id="inflows">—</div><div class="small">From daily sheets</div></div>
+          <div class="card"><div class="label">Total outflows</div><div class="metric bad" id="outflows">—</div><div class="small">From daily sheets</div></div>
+          <div class="card"><div class="label">Closing position</div><div class="metric" id="closing">—</div><div class="small">RSD equivalent</div></div>
+        </div>
+        <div class="grid two" style="margin-top:16px;">
+          <div class="card">
+            <h3>Import status</h3>
+            <p>This import is deliberately not certified yet. It has been extracted, anonymized, staged, and validated, but it still needs manual review before becoming official app data.</p>
+            <div class="progress"><span id="quality-bar"></span></div>
+            <p><b id="quality-text">—</b></p>
+          </div>
+          <div class="card">
+            <h3>Why this matters</h3>
+            <p>The PDF is only a human-readable report. The app uses the structured JSON data to power dashboards, validation, mappings, review queues, and the assistant. Later, the same JSON structure will be stored in PostgreSQL.</p>
+            <div class="btns"><button class="primary" onclick="showView('intake')">Start intake walkthrough</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="intake">
+        <div class="card">
+          <h3>Company Data Intake & Certification Engine</h3>
+          <div class="steps">
+            <div class="step"><div><b>Raw source received</b><p>The original Excel stays private. For this demo, we use anonymized extracted JSON.</p></div></div>
+            <div class="step"><div><b>Structure detected</b><p>The workbook structure was analyzed: daily sheets, monthly status sheet, currencies, cash/bank sections, and control totals.</p></div></div>
+            <div class="step"><div><b>Transactions staged</b><p>Rows were converted into normalized staged transactions with date, direction, method, currency, amount, source sheet, and source row.</p></div></div>
+            <div class="step"><div><b>Mappings suggested</b><p>Raw company categories were mapped to standard report categories with confidence scores.</p></div></div>
+            <div class="step"><div><b>Validation performed</b><p>The system checked balances, monthly summary totals, formula risks, missing data, and review issues.</p></div></div>
+            <div class="step"><div><b>Manual certification required</b><p>Only after review should the data enter the official database and become available for chatbot answers.</p></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="transactions">
+        <div class="card">
+          <h3>Staged Transactions</h3>
+          <p>These are anonymized transaction rows extracted from the March workbook. In the final app, this table becomes the staging layer before database approval.</p>
+          <div class="table-wrap"><table id="transactions-table"></table></div>
+        </div>
+      </section>
+
+      <section id="mappings">
+        <div class="card">
+          <h3>Mapping Review</h3>
+          <p>Mappings convert company language into the app’s standard reporting categories. Future months can reuse approved mappings.</p>
+          <div class="table-wrap"><table id="mappings-table"></table></div>
+        </div>
+      </section>
+
+      <section id="validation">
+        <div class="card">
+          <h3>Validation Results</h3>
+          <p>Validation prevents silent errors. The app should never trust the uploaded file blindly.</p>
+          <div class="table-wrap"><table id="validation-table"></table></div>
+        </div>
+      </section>
+
+      <section id="review">
+        <div class="card">
+          <h3>Manual Review Queue</h3>
+          <p>Manual work should focus on exceptions, not every row. This table shows items that need attention.</p>
+          <div class="table-wrap"><table id="review-table"></table></div>
+        </div>
+      </section>
+
+      <section id="certify">
+        <div class="grid two">
+          <div class="card">
+            <h3>Certification step</h3>
+            <p>This simulates approving the import into the official database. In this simple Railway demo, approval is stored only in your browser. Later, this button will write approved data into PostgreSQL.</p>
+            <div id="cert-summary" class="small"></div>
+            <div class="btns" style="margin-top:14px;">
+              <button class="primary" onclick="certifyImport()">Simulate certify import</button>
+              <button class="secondary" onclick="resetCertification()">Reset certification</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Real database step later</h3>
+            <p>The real app will store these records into tables like:</p>
+            <pre class="small" style="white-space: pre-wrap; background: rgba(0,0,0,.2); padding: 12px; border-radius: 12px;">source_files
+import_batches
+staged_transactions
+mapping_rules
+validation_results
+manual_review_items
+approved_transactions</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="assistant">
+        <div class="grid two">
+          <div class="card">
+            <h3>Ask the finance assistant</h3>
+            <p>The assistant answers from the March structured data only. It will not guess.</p>
+            <div class="chat" id="chat-log"></div>
+            <div style="display:grid; grid-template-columns: 1fr auto; gap:10px; margin-top:12px;">
+              <input id="question" placeholder="Ask: Why did cash decrease? What needs review? What was closing cash?" />
+              <button class="primary" onclick="ask()">Ask</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Example questions</h3>
+            <div class="btns">
+              <button class="secondary" onclick="quickAsk('How much cash do I have?')">Cash</button>
+              <button class="secondary" onclick="quickAsk('Why did cash decrease?')">Why cash changed</button>
+              <button class="secondary" onclick="quickAsk('What needs manual review?')">Manual review</button>
+              <button class="secondary" onclick="quickAsk('Does the import have validation issues?')">Validation</button>
+              <button class="secondary" onclick="quickAsk('What is the data quality?')">Data quality</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+let DATA = null;
+const fmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
+function money(n) { return `${fmt.format(Number(n || 0))} RSD`; }
+function byId(id) { return document.getElementById(id); }
+
+function statusBadge(status) {
+  const s = String(status || '').toLowerCase();
+  const cls = s.includes('pass') ? 'pass' : s.includes('fail') ? 'fail' : s.includes('critical') ? 'critical' : s.includes('review') ? 'review' : s.includes('warn') ? 'warning' : 'info';
+  return `<span class="badge ${cls}">${status || '—'}</span>`;
+}
+
+function showView(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  byId(id).classList.add('active');
+  const btn = document.querySelector(`.nav button[data-view="${id}"]`);
+  if (btn) btn.classList.add('active');
+  const titles = {
+    overview: ['Overview', 'A Railway-safe demo of the March 2020 import package.'],
+    intake: ['Intake Workflow', 'How random company data becomes certified database data.'],
+    transactions: ['Staged Transactions', 'Extracted transaction rows before official import.'],
+    mappings: ['Mapping Review', 'How raw company categories become standard reporting categories.'],
+    validation: ['Validation Results', 'Checks that prevent silent spreadsheet errors.'],
+    review: ['Manual Review Queue', 'Only exceptions require human review.'],
+    certify: ['Certify Import', 'Approve clean data before database import.'],
+    assistant: ['Finance Assistant', 'Database-backed answers with limitations.']
+  };
+  byId('page-title').textContent = titles[id][0];
+  byId('page-subtitle').textContent = titles[id][1];
+}
+
+document.querySelectorAll('.nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+
+async function loadData() {
+  const res = await fetch('/data/march_2020_import_package.json');
+  DATA = await res.json();
+  renderAll();
+}
+
+function renderAll() {
+  const s = DATA.summary;
+  byId('status-pill').textContent = s.data_quality.status;
+  byId('period-pill').textContent = `Period: ${s.period}`;
+  byId('company-pill').textContent = `Company: ${s.company_code}`;
+  byId('opening').textContent = money(s.opening_position);
+  byId('inflows').textContent = money(s.daily_sheet_inflows);
+  byId('outflows').textContent = money(s.daily_sheet_outflows);
+  byId('closing').textContent = money(s.closing_position);
+
+  const total = s.data_quality.transactions_extracted || 1;
+  const ready = total - s.data_quality.transactions_needing_review;
+  const pct = Math.max(0, Math.min(100, (ready / total) * 100));
+  byId('quality-bar').style.width = `${pct}%`;
+  byId('quality-text').textContent = `${pct.toFixed(1)}% of rows appear ready, but ${s.data_quality.transactions_needing_review} rows still need review.`;
+  byId('cert-summary').innerHTML = `
+    <p><b>Rows extracted:</b> ${s.data_quality.transactions_extracted}</p>
+    <p><b>Rows needing review:</b> ${s.data_quality.transactions_needing_review}</p>
+    <p><b>Critical validation failures:</b> ${s.data_quality.critical_validation_failures}</p>
+    <p><b>Validation warnings:</b> ${s.data_quality.validation_warnings}</p>
+    <p><b>Current local certification status:</b> ${localStorage.getItem('march_import_certified') ? '<span class="good">Certified in browser demo</span>' : '<span class="warn">Not certified</span>'}</p>`;
+
+  renderTransactions(); renderMappings(); renderValidation(); renderReview();
+  greetAssistant();
+}
+
+function renderTable(id, headers, rows) {
+  const html = `<thead><tr>${headers.map(h => `<th>${h.label}</th>`).join('')}</tr></thead><tbody>` +
+    rows.map(row => `<tr>${headers.map(h => `<td>${h.render ? h.render(row) : (row[h.key] ?? '—')}</td>`).join('')}</tr>`).join('') + `</tbody>`;
+  byId(id).innerHTML = html;
+}
+
+function renderTransactions() {
+  renderTable('transactions-table', [
+    {label:'Date', key:'transaction_date'},
+    {label:'Direction', render:r=>statusBadge(r.direction)},
+    {label:'Method', key:'payment_method'},
+    {label:'Amount', render:r=>money(r.amount_rsd_equivalent)},
+    {label:'Raw category', key:'category_raw'},
+    {label:'Suggested category', key:'canonical_category_suggested'},
+    {label:'Counterparty', key:'counterparty_anonymized'},
+    {label:'Source', render:r=>`${r.source_sheet} / row ${r.source_row}`},
+    {label:'Review', render:r=>statusBadge(r.review_status)}
+  ], DATA.transactions.slice(0, 60));
+}
+function renderMappings() {
+  renderTable('mappings-table', [
+    {label:'Raw category', key:'raw_category_from_file'},
+    {label:'Direction', render:r=>statusBadge(r.direction)},
+    {label:'Suggested category', key:'suggested_canonical_category'},
+    {label:'Report section', key:'suggested_report_section'},
+    {label:'Rows', key:'rows_affected'},
+    {label:'Needs review', key:'needs_review_rows'},
+    {label:'Total', render:r=>money(r.total_rsd_equivalent)},
+    {label:'Confidence', render:r=>statusBadge(r.mapping_confidence)}
+  ], DATA.mapping_suggestions);
+}
+function renderValidation() {
+  renderTable('validation-table', [
+    {label:'Check', key:'check_name'},
+    {label:'Status', render:r=>statusBadge(r.status)},
+    {label:'Severity', render:r=>statusBadge(r.severity)},
+    {label:'Expected', key:'expected_value'},
+    {label:'Actual', key:'actual_value'},
+    {label:'Difference', key:'difference'},
+    {label:'Action', key:'action_required'}
+  ], DATA.validation_results);
+}
+function renderReview() {
+  renderTable('review-table', [
+    {label:'Priority', render:r=>statusBadge(r.priority)},
+    {label:'Issue', key:'issue'},
+    {label:'Details', key:'details'},
+    {label:'Suggested resolution', key:'suggested_resolution'},
+    {label:'Source', render:r=>`${r.source_sheet || '—'} / row ${r.source_row || '—'}`},
+    {label:'Status', render:r=>statusBadge(r.current_status)}
+  ], DATA.manual_review_queue.slice(0, 80));
+}
+
+function certifyImport() {
+  localStorage.setItem('march_import_certified', JSON.stringify({ certifiedAt: new Date().toISOString(), period: DATA.summary.period }));
+  renderAll();
+  alert('Demo certification saved in your browser. Later this will write approved records to PostgreSQL.');
+}
+function resetCertification() {
+  localStorage.removeItem('march_import_certified');
+  renderAll();
+}
+
+function greetAssistant() {
+  const log = byId('chat-log');
+  if (log.children.length) return;
+  log.innerHTML = `<div class="bubble assistant"><b>Assistant:</b><br>I can answer from the March 2020 import package only. This is not certified yet, so I will state limitations.</div>`;
+}
+function quickAsk(q) { byId('question').value = q; ask(); }
+function ask() {
+  const input = byId('question');
+  const q = input.value.trim();
+  if (!q) return;
+  const log = byId('chat-log');
+  log.innerHTML += `<div class="bubble"><b>You:</b><br>${escapeHtml(q)}</div>`;
+  log.innerHTML += `<div class="bubble assistant"><b>Assistant:</b><br>${answer(q)}</div>`;
+  input.value = '';
+  log.scrollTop = log.scrollHeight;
+}
+function escapeHtml(x) { return String(x).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function answer(q) {
+  const s = DATA.summary;
+  const text = q.toLowerCase();
+  if (text.includes('cash') || text.includes('money') || text.includes('balance')) {
+    return `Closing position is <b>${money(s.closing_position)}</b>. Opening position was ${money(s.opening_position)}, inflows were ${money(s.daily_sheet_inflows)}, and outflows were ${money(s.daily_sheet_outflows)}. <br><br><b>Limitation:</b> the import is not certified yet and ${s.data_quality.transactions_needing_review} rows need review.`;
+  }
+  if (text.includes('decrease') || text.includes('changed') || text.includes('movement')) {
+    return `Cash decreased by <b>${money(Math.abs(s.net_cash_movement))}</b> because outflows (${money(s.daily_sheet_outflows)}) were higher than inflows (${money(s.daily_sheet_inflows)}). <br><br><b>Limitation:</b> this is based on staged daily-sheet extraction, not yet approved database data.`;
+  }
+  if (text.includes('review') || text.includes('manual')) {
+    const top = DATA.manual_review_queue.slice(0,3).map(r => `• ${escapeHtml(r.issue)} — ${escapeHtml(r.suggested_resolution || '')}`).join('<br>');
+    return `There are <b>${DATA.manual_review_queue.length}</b> manual review items. First items:<br>${top}<br><br><b>Recommended next step:</b> review high-priority items, then certify only clean rows.`;
+  }
+  if (text.includes('validation') || text.includes('issue') || text.includes('problem')) {
+    const fails = DATA.validation_results.filter(v => String(v.status).toLowerCase().includes('fail')).length;
+    const reviews = DATA.validation_results.filter(v => String(v.status).toLowerCase().includes('review') || String(v.severity).toLowerCase().includes('warning')).length;
+    return `Validation found <b>${fails}</b> failed checks and <b>${reviews}</b> checks needing review/warning. The app should not import this as official data until these are reviewed.`;
+  }
+  if (text.includes('quality') || text.includes('reliable') || text.includes('confidence')) {
+    const total = s.data_quality.transactions_extracted;
+    const review = s.data_quality.transactions_needing_review;
+    const ready = total - review;
+    return `Data quality status: <b>${escapeHtml(s.data_quality.status)}</b>. ${ready} of ${total} rows appear ready; ${review} rows still need review. <br><br><b>Reliability:</b> partial/staged, not final.`;
+  }
+  return `I can answer only from the March 2020 import package. Try asking about cash, cash movement, validation issues, manual review, or data quality. <br><br><b>Limitation:</b> this demo does not use AI or a live database yet.`;
+}
+
+loadData().catch(err => {
+  console.error(err);
+  byId('status-pill').textContent = 'Data failed to load';
+  alert('Could not load March data JSON. Check that /public/data/march_2020_import_package.json exists.');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "ask-your-business-march-import-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ultra-simple Railway demo for March 2020 university import certification workflow.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=20"
+  }
+}
