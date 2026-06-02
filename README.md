@@ -1,3 +1,3 @@
-Ask Your Business Review Center v0.4
+Ask Your Business Review Center Demo v0.5
 
-Adds streamlined review areas and editable validation/control issue forms for items with no direct transaction linked. Saves locally in browser and exports certified JSON.
+Quality-of-life update: review filters/search/scroll stay in place after certifying review items.
