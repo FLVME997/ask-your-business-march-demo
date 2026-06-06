@@ -9,7 +9,7 @@ const POSTING_TREATMENTS = window.POSTING_TREATMENTS || [];
 const TAX_TREATMENTS = window.TAX_TREATMENTS || [];
 const RAW_TO_KONTO_RULES = window.RAW_TO_KONTO_RULES || [];
 const LS_KEY = 'ayb_owner_accountant_portal_v12';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 
 const MONTH_ASSETS = {
   '2020-03': { original_file_name: '31 03 2020.xlsx', review_workbook: '/review-workbooks/University_March_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_March_2020_Import_Review_Report.pdf' },
@@ -220,7 +220,7 @@ function setRole(r) {
 }
 function allowedTabs() {
   if (role() === 'owner') return ['setup', 'owner', 'certified', 'shared', 'assistant', 'reports'];
-  return ['setup', 'accountant', 'certified', 'review', 'transactions', 'mapping', 'coa', 'validation', 'certification', 'shared', 'reports'];
+  return ['setup', 'accountant', 'readiness', 'certified', 'review', 'transactions', 'mapping', 'coa', 'validation', 'certification', 'shared', 'reports'];
 }
 function activeSection() { return document.querySelector('.section.active')?.id || (role() === 'owner' ? 'owner' : 'accountant'); }
 function setActiveSection(id) {
@@ -666,6 +666,7 @@ function renderAll() {
   renderAccountantWorkbench();
   renderShared();
   renderCertifiedData();
+  renderPeriodReadiness();
   renderReview();
   renderTx();
   renderMapping();
@@ -1038,14 +1039,181 @@ function renderValidation() {
   });
   document.getElementById('validation').innerHTML = `<div class="card"><h2>Validation / control results</h2><p class="muted">These can be resolved in the Review Center even when no single transaction is linked. Use this area for formula, monthly summary, tie-out, and source-control issues.</p>${table(['Period', 'ID', 'Check', 'Status', 'Severity', 'Original difference', 'Local status', 'Trusted source', 'Treatment', 'Explanation'], rows)}</div>`;
 }
+
+function safeSelectedPeriod() {
+  return selected === 'ALL' ? (DATA?.months?.[0]?.period || '') : selected;
+}
+function chooseMonth(period, section = 'readiness') {
+  selected = period;
+  const sel = document.getElementById('monthSelect');
+  if (sel) sel.value = period;
+  renderAll();
+  setActiveSection(section);
+}
+function periodItems(period) { return allItems().filter(i => i.period === period); }
+function periodTx(period) { return displayTxRows(period).filter(t => !t.excluded); }
+function periodDecisions(period) { return Object.values(STATE.decisions || {}).filter(d => d.period === period); }
+function periodControlReviewItems(period) { return periodItems(period).filter(i => generalIssueType(i) === 'Validation / control'); }
+function periodOpenControls(period) { return periodControlReviewItems(period).filter(i => blocksManagement(i) || blocksFormal(i)); }
+function periodOpenOwnerTasks(period) { return openTasks(period); }
+function decisionHasSerbianFields(d) {
+  if (!d || d.status !== 'accountant_certified') return true;
+  const after = d.after || {};
+  const candidates = [after, after.adjustment || {}];
+  const obj = candidates.find(x => x && (x.serbian_account_code || x.posting_treatment || x.tax_treatment)) || after;
+  const code = String(obj.serbian_account_code || '').trim();
+  const posting = String(obj.posting_treatment || '').trim();
+  const tax = String(obj.tax_treatment || '').trim();
+  if (!code || code === 'REVIEW') return false;
+  if (!posting || posting === 'requires_accountant') return false;
+  if (!tax || tax === 'accountant_review') return false;
+  return true;
+}
+function accountantCertifiedMissingSerbian(period) {
+  return periodDecisions(period).filter(d => d.status === 'accountant_certified' && !decisionHasSerbianFields(d));
+}
+function rawCategoryKey(t) { return `${t.direction || ''}|||${t.raw_category || ''}`; }
+function approvedMappingForCategory(t) {
+  return [...(STATE.mappingRules || [])].reverse().find(r =>
+    (!r.period || r.period === 'ALL' || r.period === t.period) &&
+    String(r.direction || '') === String(t.direction || '') &&
+    String(r.raw_category || '') === String(t.raw_category || '') &&
+    r.serbian_account_code && r.serbian_account_code !== 'REVIEW' &&
+    r.posting_treatment && r.posting_treatment !== 'requires_accountant' &&
+    r.tax_treatment && r.tax_treatment !== 'accountant_review'
+  );
+}
+function categoryMappingCoverage(period) {
+  const txs = periodTx(period);
+  const groups = new Map();
+  txs.forEach(t => {
+    const key = rawCategoryKey(t);
+    if (!groups.has(key)) groups.set(key, { period, direction: t.direction, raw_category: t.raw_category, count: 0, total: 0, approved_rule: null, suggested_account: suggestSerbianAccount(t) });
+    const g = groups.get(key);
+    g.count += 1;
+    g.total += Number(t.amount_rsd_equivalent || 0);
+    g.approved_rule = g.approved_rule || approvedMappingForCategory(t);
+  });
+  const rows = [...groups.values()].map(g => ({ ...g, approved: !!g.approved_rule }));
+  return { total: rows.length, approved: rows.filter(x => x.approved).length, missing: rows.filter(x => !x.approved).sort((a,b)=>Math.abs(b.total)-Math.abs(a.total)), rows };
+}
+function readinessChecks(period) {
+  const st = stats(period), mg = managementStatus(period), fm = formalStatus(period), bs = batchStatus(period), setup = setupStatus(), cov = categoryMappingCoverage(period);
+  const missingSerbian = accountantCertifiedMissingSerbian(period);
+  const controlsOpen = periodOpenControls(period);
+  const ownerTasks = periodOpenOwnerTasks(period);
+  const txs = periodTx(period);
+  const quality = localQuality(period);
+  const profileReady = serbianProfileReady();
+  const dataLoaded = txs.length > 0;
+  const noOwnerQuestions = ownerTasks.length === 0;
+  const noManagementBlockers = st.management_blocking === 0;
+  const managementQualityOk = quality >= 85;
+  const canManagementReady = dataLoaded && noManagementBlockers && noOwnerQuestions && managementQualityOk;
+  const noFormalBlockers = st.formal_blocking === 0;
+  const noMissingSerbian = missingSerbian.length === 0;
+  const canAccountingCertify = profileReady && (bs.management_ready || canManagementReady) && noFormalBlockers && noMissingSerbian;
+  const mappingCoveragePct = cov.total ? (cov.approved / cov.total) * 100 : 0;
+  const management = [
+    { label: 'Data imported and staged', ok: dataLoaded, detail: `${txs.length} active transaction row(s) available for ${period}.` },
+    { label: 'No owner clarification blocking business view', ok: noOwnerQuestions, detail: ownerTasks.length ? `${ownerTasks.length} owner question(s) still open.` : 'No owner action required for this period.' },
+    { label: 'No management blockers', ok: noManagementBlockers, detail: noManagementBlockers ? 'All blocking review issues are resolved for management use.' : `${st.management_blocking} review item(s) still block management-ready status.` },
+    { label: 'Data quality acceptable for management view', ok: managementQualityOk, detail: `Current local quality score: ${quality.toFixed(1)}/100.` }
+  ];
+  const accounting = [
+    { label: 'Company Serbian accounting profile complete', ok: profileReady, detail: profileReady ? 'Legal form, framework, tax/digital fields, accountant assignment and chart template are complete.' : `${setup.percent}% company setup complete. Serbian certification remains blocked.` },
+    { label: 'Period is management-ready or ready for management marking', ok: bs.management_ready || canManagementReady, detail: bs.management_ready ? 'Period already marked management-ready.' : canManagementReady ? 'Period can be marked management-ready.' : 'Management-ready conditions are not yet satisfied.' },
+    { label: 'All review items accountant-certified or rejected', ok: noFormalBlockers, detail: noFormalBlockers ? 'No formal review blockers remain.' : `${st.formal_blocking} item(s) still need accountant certification or rejection.` },
+    { label: 'Serbian konto / posting / tax fields complete for certified items', ok: noMissingSerbian, detail: missingSerbian.length ? `${missingSerbian.length} accountant-certified item(s) are missing konto/posting/tax treatment.` : 'Certified items have Serbian accounting fields recorded.' },
+    { label: 'Reusable Serbian category mapping coverage', ok: mappingCoveragePct >= 80, soft: true, detail: `${cov.approved}/${cov.total} raw category-direction pairs have approved reusable Serbian mapping rules (${mappingCoveragePct.toFixed(0)}%). This is a warning, not a hard block in this demo.` },
+    { label: 'Validation/control issues closed or acknowledged', ok: controlsOpen.length === 0, soft: true, detail: controlsOpen.length ? `${controlsOpen.length} validation/control issue(s) still open.` : 'No open validation/control issues in the review queue.' }
+  ];
+  return { period, stats: st, managementStatus: mg, formalStatus: fm, batchStatus: bs, setup, quality, categoryCoverage: cov, missingSerbian, controlsOpen, ownerTasks, canManagementReady, canAccountingCertify, management, accounting };
+}
+function checkIcon(ok, soft = false) { return ok ? pill('Pass', 'good') : soft ? pill('Warning', 'warn') : pill('Blocker', 'bad'); }
+function checklistTable(rows) {
+  return table(['Status','Check','Detail'], rows.map(r => `<tr><td>${checkIcon(r.ok, r.soft)}</td><td><strong>${esc(r.label)}</strong></td><td>${esc(r.detail)}</td></tr>`));
+}
+function readinessTimeline(r) {
+  const steps = [
+    ['1','Imported', true, 'Source package loaded into the app.'],
+    ['2','Validated', r.quality >= 70, `Quality ${r.quality.toFixed(1)}/100.`],
+    ['3','Management-ready', !!r.batchStatus.management_ready, r.batchStatus.management_ready_at || 'Not yet marked.'],
+    ['4','Accountant-certified', !!r.batchStatus.accountant_certified, r.batchStatus.accountant_certified_at || 'Not yet certified.'],
+    ['5','Locked', false, 'Future PostgreSQL/ledger period lock.']
+  ];
+  return `<div class="readiness-timeline">${steps.map(([n,l,ok,d]) => `<div class="readiness-step ${ok ? 'done' : ''}"><div class="readiness-num">${n}</div><strong>${esc(l)}</strong><div class="mini">${esc(d)}</div></div>`).join('')}</div>`;
+}
+function openReadinessBlockers(kind = 'formal', period = selected) {
+  selected = period;
+  const sel = document.getElementById('monthSelect');
+  if (sel) sel.value = period;
+  REVIEW_UI.status = kind === 'management' ? 'needs_review' : '';
+  REVIEW_UI.severity = '';
+  REVIEW_UI.area = '';
+  REVIEW_UI.q = '';
+  renderAll();
+  setActiveSection('review');
+}
+function renderReadinessMonthBoard() {
+  const rows = DATA.months.map(m => {
+    const r = readinessChecks(m.period);
+    return `<tr><td><strong>${esc(m.label)}</strong></td><td>${pill(r.managementStatus.label, r.managementStatus.tone)}</td><td>${pill(r.formalStatus.label, r.formalStatus.tone)}</td><td>${r.stats.management_blocking}</td><td>${r.stats.formal_blocking}</td><td>${r.ownerTasks.length}</td><td>${r.categoryCoverage.approved}/${r.categoryCoverage.total}</td><td>${r.quality.toFixed(1)}/100</td><td><button class="btn primary" onclick="chooseMonth('${m.period}','readiness')">Open checklist</button></td></tr>`;
+  });
+  return `<div class="card"><h2>Period readiness board</h2><p class="muted">This board shows whether each imported period can be used for owner management reporting or formal accountant-certified reporting.</p>${table(['Period','Management status','Accounting status','Mgmt blockers','Formal blockers','Owner questions','Approved category mappings','Quality','Action'], rows)}</div>`;
+}
+function renderPeriodReadiness() {
+  const container = document.getElementById('readiness');
+  if (!container) return;
+  const periods = selected === 'ALL' ? DATA.months.map(m => m.period) : [selected];
+  const board = renderReadinessMonthBoard();
+  const details = periods.map(period => {
+    const m = monthByPeriod(period), r = readinessChecks(period);
+    const missingRows = r.categoryCoverage.missing.slice(0, 12).map(x => `<tr><td>${pill(x.direction || '')}</td><td>${esc(x.raw_category || '')}</td><td>${x.count}</td><td>${money(x.total)}</td><td>${esc(x.suggested_account?.code || '')} - ${esc(x.suggested_account?.name || '')}</td></tr>`);
+    const blockerRows = periodItems(period).filter(i => blocksManagement(i) || blocksFormal(i)).slice(0, 18).map(i => `<tr class="clickable-row" onclick="openModal('${i.review_item_id}')"><td>${esc(i.review_item_id)}</td><td>${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}</td><td>${pill(generalIssueType(i),'purple')}</td><td>${esc(i.severity || '')}</td><td>${esc(i.description || '')}</td><td>${esc(i.source_reference || '')}</td></tr>`);
+    const selectedActions = selected === 'ALL' ? '<span class="mini">Choose one month above to run actions.</span>' : `<button class="btn purpleBtn" ${r.canManagementReady ? '' : 'disabled'} onclick="markMonthManagementReady()">Mark period management-ready</button><button class="btn good" ${r.canAccountingCertify ? '' : 'disabled'} onclick="certifyMonthAccountant()">Accountant certify period</button><button class="btn" onclick="exportPeriodCertificationPack()">Export period certification pack</button>`;
+    const readinessNotice = r.canAccountingCertify ? '<div class="ready-banner"><strong>Accounting certification can proceed.</strong><div>The period has passed the hard readiness gates for this demo.</div></div>' : r.canManagementReady ? '<div class="notice oknotice"><strong>Management-ready can proceed.</strong><div>Owner dashboard can be unlocked with accounting-certification limitation still shown.</div></div>' : '<div class="notice"><strong>Period still needs work.</strong><div>Resolve the blockers below before marking management-ready or accountant-certified.</div></div>';
+    return `<div class="card readiness-card"><div class="owner-hero"><div><div class="portal-tag">Period readiness checklist</div><h2>${esc(m.label)}</h2><p class="muted">This is the final gate between reviewed import data and owner/accountant use. Management-ready unlocks owner analysis with limitations. Accountant-certified is the stronger formal review status.</p></div><div class="owner-status-stack">${pill(r.managementStatus.label, r.managementStatus.tone)} ${pill(r.formalStatus.label, r.formalStatus.tone)}</div></div>${readinessTimeline(r)}${readinessNotice}<div class="portal-actions">${selectedActions}</div><div class="grid two"><div class="card inner"><h3>Management-ready checklist</h3>${checklistTable(r.management)}</div><div class="card inner"><h3>Accountant certification checklist</h3>${checklistTable(r.accounting)}</div></div><div class="grid two"><div class="card inner"><h3>Open blockers and review items</h3>${blockerRows.length ? table(['ID','Status','Area','Severity','Description','Source'], blockerRows) : '<div class="ready-banner">No open blockers for this period.</div>'}</div><div class="card inner"><h3>Category mapping coverage</h3><p class="muted">This shows raw category-direction pairs that do not yet have a reusable accountant-approved Serbian mapping rule. It helps automate future months.</p>${missingRows.length ? table(['Direction','Raw category','Rows','Total','Current suggestion'], missingRows) : '<div class="ready-banner">All category-direction pairs have approved reusable mapping rules.</div>'}</div></div></div>`;
+  }).join('');
+  container.innerHTML = `<div class="card readiness-intro"><h2>Period Readiness & Certification Checklist v1.4</h2><p class="muted">Use this page before moving data into stronger reports, owner dashboards, chatbot answers, or later PostgreSQL/ledger tables. It separates the quick owner-facing management gate from the accountant-certified Serbian accounting gate.</p><div class="notice">Current demo is browser-local. This readiness checklist records workflow state only. In the database version it becomes period status, certification logs, audit events, and period locks.</div></div>${board}${details}`;
+}
+function periodCertificationPackObj(period = safeSelectedPeriod()) {
+  const r = readinessChecks(period);
+  const m = monthByPeriod(period);
+  return {
+    exported_at: now(),
+    pack_type: 'Period Readiness & Certification Pack',
+    app: 'Ask Your Business Period Readiness Demo',
+    version: APP_VERSION,
+    company_code: DATA.company_code,
+    period,
+    label: m?.label || period,
+    company_profile: STATE.companyProfile,
+    setup_status: setupStatus(),
+    readiness: r,
+    batch_status: STATE.batchStatuses[period] || {},
+    decisions: periodDecisions(period),
+    open_review_items: periodItems(period).filter(i => blocksManagement(i) || blocksFormal(i)),
+    owner_tasks: periodOpenOwnerTasks(period),
+    manual_adjustments: Object.values(STATE.manualAdjustments || {}).filter(a => a.period === period),
+    mapping_rules: STATE.mappingRules.filter(rule => !rule.period || rule.period === 'ALL' || rule.period === period),
+    category_mapping_coverage: r.categoryCoverage,
+    certified_summary: certifiedSummary(period),
+    adjusted_summary: adjSummary(period),
+    serbian_dictionary: serbianDictionaryObj()
+  };
+}
+function exportPeriodCertificationPack() {
+  if (selected === 'ALL') return alert('Choose one month before exporting a period certification pack.');
+  download(`period_certification_pack_${selected}_${new Date().toISOString().slice(0,10)}.json`, periodCertificationPackObj(selected));
+}
+
 function renderCert() {
   const rows = scopeMonths().map(m => {
-    const s = stats(m.period), mg = managementStatus(m.period), fm = formalStatus(m.period), bs = batchStatus(m.period);
-    const mgDisabled = s.management_blocking > 0 || selected === 'ALL';
-    const certDisabled = s.formal_blocking > 0 || selected === 'ALL';
-    return `<tr><td>${m.label}</td><td>${pill(mg.label, mg.tone)}</td><td>${pill(fm.label, fm.tone)}</td><td>${s.management_blocking}</td><td>${s.formal_blocking}</td><td>${localQuality(m.period).toFixed(1)}/100</td><td>${bs.management_ready ? esc(bs.management_ready_at || '') : ''}</td><td>${bs.accountant_certified ? esc(bs.accountant_certified_at || '') : ''}</td><td>${selected === 'ALL' ? '<span class="mini">Choose one month</span>' : `<button class="btn purpleBtn" ${mgDisabled ? 'disabled' : ''} onclick="markMonthManagementReady()">Mark management-ready</button> <button class="btn good" ${certDisabled ? 'disabled' : ''} onclick="certifyMonthAccountant()">Accountant certify</button>`}</td></tr>`;
+    const r = readinessChecks(m.period), s = r.stats, mg = r.managementStatus, fm = r.formalStatus, bs = r.batchStatus;
+    return `<tr><td>${m.label}</td><td>${pill(mg.label, mg.tone)}</td><td>${pill(fm.label, fm.tone)}</td><td>${s.management_blocking}</td><td>${s.formal_blocking}</td><td>${r.ownerTasks.length}</td><td>${r.categoryCoverage.approved}/${r.categoryCoverage.total}</td><td>${localQuality(m.period).toFixed(1)}/100</td><td>${bs.management_ready ? esc(bs.management_ready_at || '') : ''}</td><td>${bs.accountant_certified ? esc(bs.accountant_certified_at || '') : ''}</td><td><button class="btn primary" onclick="chooseMonth('${m.period}','readiness')">Open readiness</button></td></tr>`;
   });
-  document.getElementById('certification').innerHTML = `<div class="card"><h2>Batch status and certification</h2><p class="muted">Management-ready means the owner can use dashboards with warnings. Accountant-certified means professional/accounting review is complete for that period.</p>${table(['Month', 'Management status', 'Accountant status', 'Mgmt blockers', 'Formal blockers', 'Quality', 'Management-ready at', 'Certified at', 'Action'], rows)}</div>`;
+  document.getElementById('certification').innerHTML = `<div class="card"><h2>Batch status and certification</h2><p class="muted">v1.4 moves period actions into the Period Readiness page so the accountant sees exactly what is blocking management-ready or formal certification.</p>${table(['Month', 'Management status', 'Accountant status', 'Mgmt blockers', 'Formal blockers', 'Owner questions', 'Approved category mappings', 'Quality', 'Management-ready at', 'Certified at', 'Action'], rows)}</div>`;
 }
 
 function renderAssistant() {
@@ -1392,30 +1560,39 @@ function saveDecision(status, next = false) {
 
 function markMonthManagementReady() {
   if (selected === 'ALL') return alert('Choose one month first.');
-  const s = stats(selected);
-  if (s.management_blocking > 0) return alert(`${s.management_blocking} management blocker(s) remain. Resolve or send them to the correct workflow first.`);
-  STATE.batchStatuses[selected] = { ...(STATE.batchStatuses[selected] || {}), management_ready: true, management_ready_by: 'Accountant Reviewer', management_ready_at: now(), local_quality_score: localQuality(selected) };
-  audit('month_marked_management_ready', { period: selected });
-  saveState(); renderAll(); alert(`${month().label} marked management-ready.`);
+  const r = readinessChecks(selected);
+  if (!r.canManagementReady) {
+    const blockers = r.management.filter(x => !x.ok).map(x => `- ${x.label}: ${x.detail}`).join('\n');
+    alert(`Management-ready is still blocked:\n${blockers}`);
+    setActiveSection('readiness');
+    return;
+  }
+  STATE.batchStatuses[selected] = { ...(STATE.batchStatuses[selected] || {}), management_ready: true, management_ready_by: 'Accountant Reviewer', management_ready_at: now(), local_quality_score: localQuality(selected), readiness_version: APP_VERSION };
+  audit('month_marked_management_ready', { period: selected, readiness: r });
+  saveState(); renderAll(); setActiveSection('readiness'); alert(`${month().label} marked management-ready.`);
 }
 function certifyMonthAccountant() {
-  if (!serbianProfileReady()) { alert('Complete Company Setup before certifying a period to Serbian accounting standards.'); setActiveSection('setup'); return; }
   if (selected === 'ALL') return alert('Choose one month first.');
-  const s = stats(selected);
-  if (s.formal_blocking > 0) return alert(`${s.formal_blocking} item(s) still need accountant certification or rejection before formal certification.`);
-  STATE.batchStatuses[selected] = { ...(STATE.batchStatuses[selected] || {}), management_ready: true, management_ready_by: STATE.batchStatuses[selected]?.management_ready_by || 'Accountant Reviewer', management_ready_at: STATE.batchStatuses[selected]?.management_ready_at || now(), accountant_certified: true, accountant_certified_by: 'Accountant Reviewer', accountant_certified_at: now(), local_quality_score: localQuality(selected) };
-  audit('month_accountant_certified', { period: selected });
-  saveState(); renderAll(); alert(`${month().label} accountant-certified locally.`);
+  const r = readinessChecks(selected);
+  if (!r.canAccountingCertify) {
+    const blockers = r.accounting.filter(x => !x.ok && !x.soft).map(x => `- ${x.label}: ${x.detail}`).join('\n');
+    alert(`Accountant certification is still blocked:\n${blockers || 'Review readiness checklist.'}`);
+    setActiveSection(!serbianProfileReady() ? 'setup' : 'readiness');
+    return;
+  }
+  STATE.batchStatuses[selected] = { ...(STATE.batchStatuses[selected] || {}), management_ready: true, management_ready_by: STATE.batchStatuses[selected]?.management_ready_by || 'Accountant Reviewer', management_ready_at: STATE.batchStatuses[selected]?.management_ready_at || now(), accountant_certified: true, accountant_certified_by: 'Accountant Reviewer', accountant_certified_at: now(), local_quality_score: localQuality(selected), readiness_version: APP_VERSION };
+  audit('month_accountant_certified', { period: selected, readiness: r });
+  saveState(); renderAll(); setActiveSection('readiness'); alert(`${month().label} accountant-certified locally.`);
 }
 
 function setCoaFilter(k, v) { COA_UI[k] = v; renderSerbianCOA(); }
 function serbianDictionaryObj() { return { exported_at: now(), pack_type: 'Serbian Chart of Accounts Mapping Dictionary', version: APP_VERSION, company_profile: STATE.companyProfile, source_note: 'Full Serbian Kontni okvir dictionary for privredna društva, zadruge i preduzetnici. App REVIEW placeholder is not an official konto. Accountant must confirm final company account plan, analytical accounts, posting rule and tax treatment.', accounts: SERBIAN_ACCOUNTS, raw_to_konto_rules: RAW_TO_KONTO_RULES.map(r => ({ pattern: String(r.pattern), direction: r.direction, code: r.code, account: accountLabel(r.code), reason: r.reason })), posting_treatments: POSTING_TREATMENTS, tax_treatments: TAX_TREATMENTS, local_mapping_rules: STATE.mappingRules || [] }; }
 function exportSerbianDictionary() { download(`serbian_coa_mapping_dictionary_${new Date().toISOString().slice(0,10)}.json`, serbianDictionaryObj()); }
 function exportObj() {
-  return { exported_at: now(), app: 'Ask Your Business Serbian Full COA Mapping Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), certified_summary: certifiedSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), management_ready_transactions: certifiedSummary(m.period).managementRows, accountant_certified_transactions: certifiedSummary(m.period).accountingRows, rejected_rows: certifiedSummary(m.period).rejectedRows, pending_rows: certifiedSummary(m.period).pendingRows, unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+  return { exported_at: now(), app: 'Ask Your Business Period Readiness Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), certified_summary: certifiedSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), management_ready_transactions: certifiedSummary(m.period).managementRows, accountant_certified_transactions: certifiedSummary(m.period).accountingRows, rejected_rows: certifiedSummary(m.period).rejectedRows, pending_rows: certifiedSummary(m.period).pendingRows, unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
 }
 function managementAnalysisPackObj() {
-  return { exported_at: now(), pack_type: 'Management Analysis Pack', app: 'Ask Your Business Serbian Full COA Mapping Demo', version: APP_VERSION, company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, purpose: 'Owner/management-ready dataset with limitations. Not a formal accountant-certified report unless the period status says accountant-certified.', scope_status: { management: managementStatus(), formal: formalStatus(), limitations: certificationLimitations().limits }, months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), limitations: certificationLimitations(m.period).limits, summary: certifiedSummary(m.period).management, category_breakdown: categoryBreakdownRows(certifiedSummary(m.period).managementRows, 999), transactions: certifiedSummary(m.period).managementRows, manual_adjustments: certifiedSummary(m.period).adjustments, rejected_rows: certifiedSummary(m.period).rejectedRows })) };
+  return { exported_at: now(), pack_type: 'Management Analysis Pack', app: 'Ask Your Business Period Readiness Demo', version: APP_VERSION, company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, purpose: 'Owner/management-ready dataset with limitations. Not a formal accountant-certified report unless the period status says accountant-certified.', scope_status: { management: managementStatus(), formal: formalStatus(), limitations: certificationLimitations().limits }, months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), limitations: certificationLimitations(m.period).limits, summary: certifiedSummary(m.period).management, category_breakdown: categoryBreakdownRows(certifiedSummary(m.period).managementRows, 999), transactions: certifiedSummary(m.period).managementRows, manual_adjustments: certifiedSummary(m.period).adjustments, rejected_rows: certifiedSummary(m.period).rejectedRows })) };
 }
 function accountantPackObj() {
   return { exported_at: now(), pack_type: 'Accountant Operations Review Pack', version: APP_VERSION, company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
@@ -1447,6 +1624,9 @@ window.applyUniversitySetupPreset = applyUniversitySetupPreset;
 window.resetCompanySetup = resetCompanySetup;
 window.markMonthManagementReady = markMonthManagementReady;
 window.certifyMonthAccountant = certifyMonthAccountant;
+window.chooseMonth = chooseMonth;
+window.exportPeriodCertificationPack = exportPeriodCertificationPack;
+window.openReadinessBlockers = openReadinessBlockers;
 window.ask = ask;
 window.renderReviewTable = renderReviewTable;
 window.renderTxTable = renderTxTable;

@@ -1,1 +1,1 @@
-{"scripts":{"start":"node server.js"},"dependencies":{},"devDependencies":{},"engines":{"node":">=18"},"name":"ask-your-business-serbian-full-coa-mapping-demo","version":"1.3.0"}
+{"scripts":{"start":"node server.js"},"dependencies":{},"devDependencies":{},"engines":{"node":">=18"},"name":"ask-your-business-period-readiness-demo","version":"1.4.0"}
