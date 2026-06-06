@@ -1,19 +1,17 @@
-# Ask Your Business - Company Setup & Serbian Accounting Profile Demo v1.1
+# Ask Your Business - Serbian COA Mapping Dictionary v1.2
 
-This is a zero-dependency Railway demo for the owner/accountant workflow with a new Company Setup foundation for Serbian accounting mapping.
+This zero-dependency Railway demo expands the Company Setup and Review Center into a Serbian accounting mapping layer.
 
-## What v1.1 adds
+## What v1.2 adds
 
-- Company Setup tab
-- Serbian legal form / entity type selector
-- Serbian accounting framework selector
-- Serbian chart-of-accounts template field
-- PDV / SEF / fiscalization / payroll / bank-cash setup
-- Setup completeness score and certification gate
-- Serbian konto dropdown inside the Review Center popup
-- Posting treatment and tax/PDV/SEF treatment fields
-- Blocking of accountant certification until the company setup profile is complete
-- Company setup JSON export
+- Searchable Serbian Chart of Accounts starter dictionary.
+- Classes 5 and 6 cost/income starter mapping plus common cash, bank, receivable, supplier, PDV, payroll, liability, and equity accounts.
+- Serbian konto suggestions in the review popup.
+- Posting treatment selector.
+- Tax / PDV / SEF treatment selector.
+- Reusable mapping rules that can store: raw category + mapped category + Serbian konto + posting treatment + tax treatment.
+- Serbian COA tab for accountant-side review and filtering.
+- Export Serbian dictionary JSON for later PostgreSQL import.
 
 ## Local run
 
@@ -27,8 +25,8 @@ Open http://localhost:3000.
 
 Upload the contents of this folder to the existing GitHub repo connected to Railway. Keep `Dockerfile`, `server.js`, `package.json`, and `public/` at the repository root.
 
-Test deployment with `/health`. Expected version: `1.1.0`.
+Test deployment with `/health`. Expected version: `1.2.0`.
 
 ## Important limitation
 
-Review decisions and the company setup profile are still saved in browser localStorage only. Export the company setup / certified packages before clearing browser data. The next major technical step is PostgreSQL persistence.
+This is still browser-local. Company profile, review decisions, Serbian konto selections, and certifications are stored in localStorage. Export packages before clearing browser data. PostgreSQL comes later.

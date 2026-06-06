@@ -3,8 +3,13 @@ let SOURCE_EVIDENCE = {};
 let selected = 'ALL';
 let currentId = null;
 let REVIEW_UI = { q: '', status: 'needs_review', severity: '', area: '', scrollTop: 0, scrollLeft: 0 };
-const LS_KEY = 'ayb_owner_accountant_portal_v11';
-const APP_VERSION = '1.1.0';
+let COA_UI = { q: '', type: '', klass: '', risk: '' };
+const SERBIAN_ACCOUNTS = window.SERBIAN_ACCOUNTS || [];
+const POSTING_TREATMENTS = window.POSTING_TREATMENTS || [];
+const TAX_TREATMENTS = window.TAX_TREATMENTS || [];
+const RAW_TO_KONTO_RULES = window.RAW_TO_KONTO_RULES || [];
+const LS_KEY = 'ayb_owner_accountant_portal_v12';
+const APP_VERSION = '1.2.0';
 
 const MONTH_ASSETS = {
   '2020-03': { original_file_name: '31 03 2020.xlsx', review_workbook: '/review-workbooks/University_March_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_March_2020_Import_Review_Report.pdf' },
@@ -12,84 +17,147 @@ const MONTH_ASSETS = {
   '2020-05': { original_file_name: '29.05.2020..xlsx', review_workbook: '/review-workbooks/University_May_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_May_2020_Import_Review_Report.pdf' }
 };
 
-const LEGAL_FORMS_RS = [
-  ['do_o', 'D.O.O. - Društvo sa ograničenom odgovornošću'],
-  ['ad', 'A.D. - Akcionarsko društvo'],
-  ['od', 'O.D. - Ortačko društvo'],
-  ['kd', 'K.D. - Komanditno društvo'],
-  ['preduzetnik', 'Preduzetnik'],
-  ['zadruga', 'Zadruga'],
-  ['zadruzni_savez', 'Zadružni savez'],
-  ['javno_preduzece', 'Javno preduzeće'],
-  ['ogranak_stranog_drustva', 'Ogranak stranog privrednog društva'],
-  ['predstavnistvo_stranog_drustva', 'Predstavništvo stranog privrednog društva'],
-  ['ustanova', 'Ustanova'],
-  ['udruzenje', 'Udruženje'],
-  ['fondacija_zaduzbina', 'Fondacija / zadužbina'],
-  ['drugo_pravno_lice', 'Drugo pravno lice'],
-  ['banka', 'Banka - special regulated setup'],
-  ['osiguranje', 'Društvo za osiguranje / reosiguranje - special setup'],
-  ['finansijski_lizing', 'Davalac finansijskog lizinga - special setup'],
-  ['brokersko_dilersko', 'Brokersko-dilersko društvo - special setup'],
-  ['investicioni_fond', 'Investicioni fond / društvo za upravljanje - special setup'],
-  ['penzijski_fond', 'Dobrovoljni penzijski fond / društvo za upravljanje - special setup'],
-  ['other', 'Other / needs accountant configuration']
-];
-const ACCOUNTING_FRAMEWORKS_RS = [
-  ['rs_privredna_drustva_zadruge_preduzetnici', 'Serbia - Privredna društva, zadruge i preduzetnici'],
-  ['rs_druga_pravna_lica', 'Serbia - Druga pravna lica'],
-  ['rs_banke_nbs', 'Serbia - Banke / NBS regulated chart'],
-  ['rs_osiguranje', 'Serbia - Insurance companies'],
-  ['rs_finansijski_lizing', 'Serbia - Financial leasing companies'],
-  ['rs_investicioni_kapital', 'Serbia - Investment / capital market entities'],
-  ['rs_javni_budzet', 'Serbia - Public / budget accounting'],
-  ['unknown', 'Unknown - accountant must configure']
-];
-const COMPANY_CLASSIFICATIONS = [['unknown','Unknown'],['micro','Micro'],['small','Small'],['medium','Medium'],['large','Large']];
-const YES_NO_UNKNOWN = [['unknown','Unknown / not confirmed'],['yes','Yes'],['no','No']];
-const PDV_PERIODS = [['not_applicable','Not applicable'],['monthly','Monthly'],['quarterly','Quarterly'],['unknown','Unknown']];
-const SERBIAN_ACCOUNT_OPTIONS = [
-  ['241', 'Tekući računi'], ['243', 'Blagajna'], ['244', 'Devizni račun'], ['246', 'Devizna blagajna'],
-  ['204', 'Kupci u zemlji'], ['435', 'Dobavljači u zemlji'], ['470', 'Obaveze za PDV'], ['270', 'PDV u primljenim fakturama'],
-  ['500', 'Nabavka robe'], ['501', 'Nabavna vrednost prodate robe'], ['512', 'Troškovi ostalog materijala'], ['513', 'Troškovi goriva i energije'],
-  ['520', 'Troškovi zarada i naknada zarada - bruto'], ['521', 'Troškovi poreza i doprinosa na zarade na teret poslodavca'], ['529', 'Ostali lični rashodi i naknade'],
-  ['531', 'Troškovi transportnih usluga'], ['532', 'Troškovi usluga održavanja'], ['533', 'Troškovi zakupa'], ['535', 'Troškovi reklame i propagande'], ['539', 'Troškovi ostalih proizvodnih usluga'],
-  ['550', 'Troškovi neproizvodnih usluga'], ['551', 'Troškovi reprezentacije'], ['552', 'Troškovi premija osiguranja'], ['553', 'Troškovi platnog prometa'], ['554', 'Troškovi članarina'], ['555', 'Troškovi poreza i naknada'], ['559', 'Ostali nematerijalni troškovi'],
-  ['562', 'Rashodi kamata prema trećim licima'], ['563', 'Negativne kursne razlike'], ['569', 'Ostali finansijski rashodi'], ['574', 'Manjkovi'], ['579', 'Ostali nepomenuti rashodi'],
-  ['604', 'Prihodi od prodaje robe na domaćem tržištu'], ['614', 'Prihodi od prodaje proizvoda i usluga na domaćem tržištu'], ['650', 'Prihodi od zakupa'], ['651', 'Prihodi od članarina'], ['659', 'Ostali poslovni prihodi'], ['662', 'Prihodi od kamata'], ['663', 'Pozitivne kursne razlike'], ['674', 'Viškovi'], ['679', 'Ostali nepomenuti prihodi'],
-  ['NEEDS_REVIEW', 'Needs accountant configuration / no automatic konto']
-];
-const POSTING_TREATMENTS_RS = [
-  ['direct_cash_bank_payment', 'Direct cash/bank payment'],
-  ['invoice_accrual_then_payment', 'Invoice/accrual then payment'],
-  ['cash_bank_transfer', 'Cash/bank/internal transfer'],
-  ['fx_conversion_transfer', 'FX conversion / currency transfer'],
-  ['payroll_posting', 'Payroll posting'],
-  ['owner_related_party', 'Owner / related-party movement'],
-  ['manual_adjustment', 'Manual adjustment'],
-  ['needs_accountant_review', 'Needs accountant review']
-];
-const TAX_TREATMENTS_RS = [
-  ['not_assessed', 'Not assessed yet'],
-  ['no_vat', 'No VAT / outside VAT'],
-  ['pdv_20', 'PDV 20%'],
-  ['pdv_10', 'PDV 10%'],
-  ['vat_exempt', 'VAT exempt / special exemption'],
-  ['reverse_charge', 'Reverse charge / internal VAT calculation'],
-  ['payroll_tax_contributions', 'Payroll tax/contributions'],
-  ['withholding_tax_review', 'Withholding tax review'],
-  ['sef_required', 'SEF/e-invoice required'],
-  ['fiscalization_required', 'Fiscalization required'],
-  ['needs_accountant_review', 'Needs accountant review']
-];
-
-
 let STATE = blankState();
 
 const fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money = n => `${fmt.format(Number(n || 0))} RSD`;
 const esc = x => String(x ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 const now = () => new Date().toISOString();
+
+
+const LEGAL_FORMS_RS = [
+  { value: '', label: 'Select legal form...', support: 'missing' },
+  { value: 'doo', label: 'D.O.O. - Društvo sa ograničenom odgovornošću', support: 'supported' },
+  { value: 'ad', label: 'A.D. - Akcionarsko društvo', support: 'supported' },
+  { value: 'od', label: 'O.D. - Ortačko društvo', support: 'supported' },
+  { value: 'kd', label: 'K.D. - Komanditno društvo', support: 'supported' },
+  { value: 'preduzetnik', label: 'Preduzetnik', support: 'supported' },
+  { value: 'zadruga', label: 'Zadruga', support: 'supported' },
+  { value: 'zadruzni_savez', label: 'Zadružni savez', support: 'supported' },
+  { value: 'javno_preduzece', label: 'Javno preduzeće', support: 'review' },
+  { value: 'ogranak_stranog', label: 'Ogranak stranog privrednog društva', support: 'review' },
+  { value: 'predstavnistvo_stranog', label: 'Predstavništvo stranog privrednog društva', support: 'review' },
+  { value: 'ustanova', label: 'Ustanova', support: 'special' },
+  { value: 'udruzenje', label: 'Udruženje', support: 'special' },
+  { value: 'fondacija', label: 'Fondacija / zadužbina', support: 'special' },
+  { value: 'drugo_pravno_lice', label: 'Drugo pravno lice', support: 'special' },
+  { value: 'banka', label: 'Banka', support: 'regulated' },
+  { value: 'osiguranje', label: 'Društvo za osiguranje / reosiguranje', support: 'regulated' },
+  { value: 'finansijski_lizing', label: 'Davalac finansijskog lizinga', support: 'regulated' },
+  { value: 'broker_diler', label: 'Brokersko-dilersko društvo', support: 'regulated' },
+  { value: 'investicioni_fond', label: 'Društvo za upravljanje investicionim fondovima / investicioni fond', support: 'regulated' },
+  { value: 'penzijski_fond', label: 'Dobrovoljni penzijski fond / društvo za upravljanje', support: 'regulated' },
+  { value: 'other', label: 'Other / accountant configuration required', support: 'special' }
+];
+const ACCOUNTING_FRAMEWORKS_RS = [
+  { value: '', label: 'Select accounting framework...' },
+  { value: 'rs_privredna_drustva_zadruge_preduzetnici', label: 'Serbia - Privredna društva, zadruge i preduzetnici' },
+  { value: 'rs_druga_pravna_lica', label: 'Serbia - Druga pravna lica' },
+  { value: 'rs_banke', label: 'Serbia - Banke' },
+  { value: 'rs_osiguranje', label: 'Serbia - Osiguranje' },
+  { value: 'rs_finansijski_lizing', label: 'Serbia - Finansijski lizing' },
+  { value: 'rs_investicioni_kapitalno_trziste', label: 'Serbia - Investicioni fondovi / tržište kapitala' },
+  { value: 'rs_javni_budzet', label: 'Serbia - Public/budget accounting, later' },
+  { value: 'unknown', label: 'Unknown - accountant must configure' }
+];
+const CHART_TEMPLATES_RS = [
+  { value: '', label: 'Select chart template...' },
+  { value: 'standard_rs_2020_privredna', label: 'RS standard chart template - Kontni okvir 89/2020' },
+  { value: 'custom_company_plan', label: 'Custom company account plan / analitika' },
+  { value: 'special_required', label: 'Special regulated framework required' }
+];
+const SETUP_SECTIONS = [
+  ['identity', 'Identity'],
+  ['legal', 'Legal/framework'],
+  ['tax', 'Tax & digital'],
+  ['operations', 'Operations'],
+  ['workflow', 'Workflow controls']
+];
+
+function defaultCompanyProfile() {
+  return {
+    legal_name: 'University Demo', trading_name: 'University Demo', country: 'Serbia', registered_address: '', email: '',
+    maticni_broj: '', pib: '', incorporation_date: '', activity_code: '', legal_form: '', entity_size: 'unknown',
+    base_currency: 'RSD', fiscal_year_start: '01-01', fiscal_year_end: '12-31', accounting_framework: '', chart_template: '', reporting_basis: 'Serbian statutory / management demo',
+    pdv_status: '', pdv_period: '', sef_status: '', fiscalization_status: '', payroll_required: 'yes', foreign_currency: 'yes', corporate_tax: 'yes', withholding_tax: 'unknown',
+    bank_rsd: true, bank_eur: true, cash_rsd: true, cash_eur: true, fx_rate_source: 'Workbook detected rate / accountant confirmation',
+    has_excel_workbooks: true, has_bank_statements: true, has_invoices: false, has_bills: false, has_contracts: false, has_payroll: true, has_student_payments: true, has_inventory_pos: false, has_intercompany: false,
+    accountant_assigned: '', senior_reviewer: '', owner_contact: 'Business Owner', managed_by_internal_team: 'yes',
+    materiality_threshold: 50000, high_value_threshold: 250000, fx_tolerance: 1, auto_map_allowed: 'after_accountant_approval',
+    setup_notes: '', setup_saved_at: null
+  };
+}
+function mergeProfile(profile) { return { ...defaultCompanyProfile(), ...(profile || {}) }; }
+function companyProfile() { STATE.companyProfile = mergeProfile(STATE.companyProfile); return STATE.companyProfile; }
+function legalFormMeta(value) { return LEGAL_FORMS_RS.find(x => x.value === value) || LEGAL_FORMS_RS[0]; }
+function optionList(arr, value) { return arr.map(o => `<option value="${esc(o.value)}" ${o.value === value ? 'selected' : ''}>${esc(o.label)}</option>`).join(''); }
+function yesNoUnknown(value) { const arr = [['','Select...'],['yes','Yes'],['no','No'],['unknown','Unknown / accountant to confirm']]; return arr.map(([v,l]) => `<option value="${v}" ${v === value ? 'selected' : ''}>${l}</option>`).join(''); }
+function setupScore() {
+  const p = companyProfile();
+  const checks = {
+    identity: ['legal_name','country','base_currency','fiscal_year_start','fiscal_year_end'].every(k => String(p[k] || '').trim()),
+    legal: ['legal_form','accounting_framework','chart_template'].every(k => String(p[k] || '').trim()),
+    tax: ['pdv_status','sef_status','fiscalization_status','payroll_required'].every(k => String(p[k] || '').trim()),
+    operations: [p.has_excel_workbooks, p.has_bank_statements, p.has_invoices, p.has_bills, p.has_contracts, p.has_payroll, p.has_student_payments, p.has_inventory_pos].some(Boolean) && [p.bank_rsd, p.bank_eur, p.cash_rsd, p.cash_eur].some(Boolean),
+    workflow: String(p.accountant_assigned || '').trim() && String(p.owner_contact || '').trim() && Number(p.materiality_threshold || 0) > 0
+  };
+  const complete = Object.values(checks).filter(Boolean).length;
+  return { checks, complete, total: Object.keys(checks).length, percent: Math.round(complete / Object.keys(checks).length * 100) };
+}
+function serbianProfileReady() {
+  const s = setupScore(), p = companyProfile(), meta = legalFormMeta(p.legal_form);
+  const unsupported = ['special','regulated','missing'].includes(meta.support) || ['unknown',''].includes(p.accounting_framework);
+  return s.checks.identity && s.checks.legal && s.checks.tax && s.checks.workflow && !unsupported;
+}
+function setupStatus() {
+  const score = setupScore(), p = companyProfile(), meta = legalFormMeta(p.legal_form);
+  let label = 'Incomplete setup', tone = 'warn', detail = 'Complete company setup before Serbian account certification.';
+  if (serbianProfileReady()) { label = 'Serbian certification profile ready'; tone = 'good'; detail = 'Accountant can map to Serbian konta and certify periods in this demo layer.'; }
+  else if (score.percent >= 80) { label = 'Almost ready'; tone = 'purple'; detail = 'Some required fields or framework support still needs accountant confirmation.'; }
+  else if (meta.support === 'special' || meta.support === 'regulated') { label = 'Special setup required'; tone = 'bad'; detail = 'This legal form may require a different Serbian framework or regulated chart of accounts.'; }
+  return { ...score, label, tone, detail, support: meta.support, legal_label: meta.label };
+}
+function checked(v) { return v ? 'checked' : ''; }
+function inputField(id, label, value, extra = '') { return `<div class="field"><label>${esc(label)}</label><input id="${esc(id)}" value="${esc(value ?? '')}" ${extra}></div>`; }
+function selectField(id, label, html) { return `<div class="field"><label>${esc(label)}</label><select id="${esc(id)}">${html}</select></div>`; }
+
+function accountByCode(code) { return SERBIAN_ACCOUNTS.find(a => String(a.code) === String(code)); }
+function accountLabel(code) { const a = accountByCode(code); return a ? `${a.code} - ${a.name}` : ''; }
+function accountOptions(selected = '') {
+  return `<option value="">Select Serbian konto...</option>` + SERBIAN_ACCOUNTS.map(a => `<option value="${esc(a.code)}" ${String(a.code) === String(selected) ? 'selected' : ''}>${esc(a.code)} - ${esc(a.name)} [${esc(a.type)}]</option>`).join('');
+}
+function selectOpt(arr, selected = '') { return (arr || []).map(x => { const v = Array.isArray(x) ? x[0] : x.id; const l = Array.isArray(x) ? x[1] : (x.name || x.label || x.id); return `<option value="${esc(v)}" ${v === selected ? 'selected' : ''}>${esc(l)}</option>`; }).join(''); }
+function suggestSerbianAccount(record = {}, reviewItem = null) {
+  const hay = `${record.raw_category || ''} ${record.suggested_category || ''} ${record.report_group || ''} ${record.description || ''} ${reviewItem?.description || ''} ${reviewItem?.details || ''}`;
+  const direction = record.direction || '';
+  const rule = RAW_TO_KONTO_RULES.find(r => (!r.direction || !direction || r.direction === direction) && r.pattern.test(hay));
+  if (rule) return { ...accountByCode(rule.code), reason: rule.reason };
+  if (record.direction === 'inflow') return { ...accountByCode('614'), reason: 'Default inflow suggestion: service/product revenue. Accountant must confirm.' };
+  if (record.direction === 'outflow') return { ...accountByCode('550'), reason: 'Default outflow suggestion: external/non-production service. Accountant must confirm.' };
+  return { ...accountByCode('REVIEW'), reason: 'No direct transaction pattern; accountant must select treatment.' };
+}
+function postingDefault(record = {}, accountCode = '') {
+  if (['520','521','450','451','452'].includes(String(accountCode))) return 'payroll_posting';
+  if (['241','243','244','246'].includes(String(accountCode))) return 'transfer_only';
+  if (['563','663'].includes(String(accountCode))) return 'fx_result';
+  if (['424','560','561','660','661'].includes(String(accountCode))) return 'owner_related_party';
+  if (record.payment_method === 'cash' || record.payment_method === 'bank') return 'direct_cash_bank';
+  return 'requires_accountant';
+}
+function taxDefault(record = {}, accountCode = '') {
+  if (['520','521','450','451','452'].includes(String(accountCode))) return 'payroll_tax_contrib';
+  if (['614','604','605','615','550','532','531','553','555'].includes(String(accountCode))) return 'not_assessed';
+  return 'accountant_review';
+}
+function serbianMappingForm(prefix, record = {}, reviewItem = null) {
+  const suggestion = suggestSerbianAccount(record, reviewItem);
+  const code = record.serbian_account_code || suggestion.code || '';
+  const posting = record.posting_treatment || postingDefault(record, code);
+  const tax = record.tax_treatment || taxDefault(record, code);
+  const note = record.serbian_certification_note || suggestion.reason || '';
+  return `<div class="source-box serbian-map-box"><h3>Serbian accounting mapping</h3><p class="muted">This accountant-side layer connects the management category to a Serbian konto, posting treatment, and tax/evidence treatment. It is required before accountant-certified status.</p><div class="field-grid"><div class="field"><label>Suggested Serbian konto</label><select id="${prefix}Account">${accountOptions(code)}</select><div class="mini">Suggestion: ${esc(suggestion.code || '')} - ${esc(suggestion.name || '')}. ${esc(suggestion.reason || '')}</div></div><div class="field"><label>Posting treatment</label><select id="${prefix}Posting">${selectOpt(POSTING_TREATMENTS, posting)}</select></div><div class="field"><label>Tax / PDV / SEF treatment</label><select id="${prefix}Tax">${selectOpt(TAX_TREATMENTS, tax)}</select></div><div class="field" style="grid-column:1/-1"><label>Serbian accounting certification note</label><textarea id="${prefix}SerbianNote" placeholder="Why this konto/treatment is correct, what still needs review, and what evidence supports it.">${esc(note)}</textarea></div></div></div>`;
+}
+
 
 const STATUS_META = {
   needs_review: { label: 'Needs review', tone: 'warn' },
@@ -103,46 +171,9 @@ const STATUS_META = {
   escalated: { label: 'Escalated', tone: 'bad' }
 };
 
-function defaultCompanyProfile() {
-  return {
-    legal_name: 'University Demo',
-    trading_name: 'University Demo',
-    country: 'Serbia',
-    legal_form: '',
-    entity_type_note: '',
-    maticni_broj: '',
-    pib: '',
-    activity_code: '',
-    incorporation_date: '',
-    accounting_framework: '',
-    chart_template: '',
-    reporting_standard: 'Serbian statutory accounting',
-    company_classification: 'unknown',
-    base_currency: 'RSD',
-    fiscal_year_start: '01-01',
-    fiscal_year_end: '12-31',
-    pdv_status: 'unknown',
-    pdv_period: 'unknown',
-    sef_enabled: 'unknown',
-    fiscalization_required: 'unknown',
-    payroll_enabled: 'unknown',
-    foreign_currency_enabled: 'yes',
-    cash_register_enabled: 'yes',
-    bank_accounts_setup: 'partial',
-    assigned_accountant: 'Accountant Reviewer',
-    senior_reviewer: '',
-    owner_contact: 'Business Owner',
-    materiality_threshold_rsd: 50000,
-    high_value_threshold_rsd: 250000,
-    auto_map_threshold_percent: 90,
-    allow_management_ready_when_profile_incomplete: true,
-    notes: 'Demo profile. Complete legal form, accounting framework, tax profile, and bank/cash setup before Serbian accountant certification.'
-  };
-}
 function blankState() {
   return {
     role: 'owner',
-    companyProfile: defaultCompanyProfile(),
     decisions: {},
     txOverrides: {},
     controlOverrides: {},
@@ -152,16 +183,17 @@ function blankState() {
     reportGroupSuggestions: [],
     batchStatuses: {},
     clarificationTasks: {},
-    auditEvents: []
+    auditEvents: [],
+    companyProfile: defaultCompanyProfile()
   };
 }
 function loadState() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) STATE = { ...blankState(), ...JSON.parse(raw) };
-    STATE.companyProfile = { ...defaultCompanyProfile(), ...(STATE.companyProfile || {}) };
     STATE.categorySuggestions = STATE.categorySuggestions || [];
     STATE.reportGroupSuggestions = STATE.reportGroupSuggestions || [];
+    STATE.companyProfile = mergeProfile(STATE.companyProfile);
   } catch (e) { console.warn(e); }
 }
 function saveState() { localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
@@ -186,8 +218,8 @@ function setRole(r) {
   setActiveSection(r === 'owner' ? 'owner' : 'accountant');
 }
 function allowedTabs() {
-  if (role() === 'owner') return ['owner', 'company_setup', 'certified', 'shared', 'assistant', 'reports'];
-  return ['accountant', 'company_setup', 'certified', 'review', 'transactions', 'mapping', 'validation', 'certification', 'shared', 'reports'];
+  if (role() === 'owner') return ['setup', 'owner', 'certified', 'shared', 'assistant', 'reports'];
+  return ['setup', 'accountant', 'certified', 'review', 'transactions', 'mapping', 'coa', 'validation', 'certification', 'shared', 'reports'];
 }
 function activeSection() { return document.querySelector('.section.active')?.id || (role() === 'owner' ? 'owner' : 'accountant'); }
 function setActiveSection(id) {
@@ -377,9 +409,8 @@ function managementStatus(period = selected) {
   return { label: 'Needs review before management use', tone: 'warn', detail: `${st.management_blocking} item(s) still block management-ready status.` };
 }
 function formalStatus(period = selected) {
-  const st = stats(period), bs = batchStatus(period), gate = companySetupGate();
+  const st = stats(period), bs = batchStatus(period);
   if (period !== 'ALL' && bs.accountant_certified) return { label: 'Accountant-certified', tone: 'good', detail: 'Formal accountant certification recorded.' };
-  if (!canAccountantCertifySerbian()) return { label: 'Company setup required', tone: 'bad', detail: `Formal Serbian certification is blocked until company setup is complete. ${gate.detail}` };
   if (st.formal_blocking === 0) return { label: 'Ready for accountant certification', tone: 'purple', detail: 'All non-rejected items are accountant-certified; batch certification can be recorded.' };
   return { label: 'Accountant certification pending', tone: 'warn', detail: `${st.formal_blocking} item(s) still need accountant-level certification or exclusion.` };
 }
@@ -629,14 +660,15 @@ function renderAll() {
   document.getElementById('badge').textContent = `${DATA.company_code} • v${APP_VERSION}`;
   renderRoleBar();
   renderTabs();
-  renderOwnerPortal();
   renderCompanySetup();
+  renderOwnerPortal();
   renderAccountantWorkbench();
   renderShared();
   renderCertifiedData();
   renderReview();
   renderTx();
   renderMapping();
+  renderSerbianCOA();
   renderValidation();
   renderCert();
   renderAssistant();
@@ -668,221 +700,104 @@ function statusBox(title, status, body = '') {
 }
 
 
-function companyProfile() {
-  STATE.companyProfile = { ...defaultCompanyProfile(), ...(STATE.companyProfile || {}) };
-  return STATE.companyProfile;
-}
-function optionTags(options, value) {
-  return options.map(o => Array.isArray(o)
-    ? `<option value="${esc(o[0])}" ${String(o[0]) === String(value) ? 'selected' : ''}>${esc(o[1])}</option>`
-    : `<option value="${esc(o)}" ${String(o) === String(value) ? 'selected' : ''}>${esc(o)}</option>`).join('');
-}
-function profileInput(id, label, value, placeholder = '', note = '') {
-  return `<div class="field"><label>${esc(label)}</label><input id="${esc(id)}" value="${esc(value || '')}" placeholder="${esc(placeholder)}">${note ? `<div class="mini">${esc(note)}</div>` : ''}</div>`;
-}
-function profileNumber(id, label, value, placeholder = '', note = '') {
-  return `<div class="field"><label>${esc(label)}</label><input id="${esc(id)}" type="number" step="1" value="${esc(value || '')}" placeholder="${esc(placeholder)}">${note ? `<div class="mini">${esc(note)}</div>` : ''}</div>`;
-}
-function profileSelect(id, label, value, options, note = '') {
-  return `<div class="field"><label>${esc(label)}</label><select id="${esc(id)}">${optionTags(options, value)}</select>${note ? `<div class="mini">${esc(note)}</div>` : ''}</div>`;
-}
-function setupReqs() {
-  return [
-    ['legal_name', 'Legal company name', 'identity'],
-    ['country', 'Country', 'identity'],
-    ['legal_form', 'Legal form / entity type', 'legal'],
-    ['maticni_broj', 'Matični broj', 'identity'],
-    ['pib', 'PIB', 'tax'],
-    ['accounting_framework', 'Accounting framework', 'accounting'],
-    ['chart_template', 'Serbian chart template', 'accounting'],
-    ['base_currency', 'Base currency', 'accounting'],
-    ['fiscal_year_start', 'Fiscal year start', 'accounting'],
-    ['pdv_status', 'PDV status', 'tax'],
-    ['sef_enabled', 'SEF / e-faktura status', 'tax'],
-    ['fiscalization_required', 'Fiscalization status', 'tax'],
-    ['payroll_enabled', 'Payroll status', 'operations'],
-    ['cash_register_enabled', 'Cash register / blagajna', 'operations'],
-    ['bank_accounts_setup', 'Bank/cash account setup', 'operations'],
-    ['assigned_accountant', 'Assigned accountant', 'workflow']
-  ];
-}
-function isMeaningfulProfileValue(k, v) {
-  if (v === undefined || v === null) return false;
-  const val = String(v).trim();
-  if (!val) return false;
-  if (['pdv_status','sef_enabled','fiscalization_required','payroll_enabled'].includes(k) && val === 'unknown') return false;
-  if (k === 'accounting_framework' && val === 'unknown') return false;
-  if (k === 'company_classification' && val === 'unknown') return false;
-  if (k === 'bank_accounts_setup' && val === 'unknown') return false;
-  return true;
-}
-function setupStatus() {
-  const p = companyProfile();
-  const req = setupReqs();
-  const complete = req.filter(r => isMeaningfulProfileValue(r[0], p[r[0]]));
-  const missing = req.filter(r => !isMeaningfulProfileValue(r[0], p[r[0]]));
-  const criticalKeys = ['legal_form','accounting_framework','chart_template','base_currency','fiscal_year_start','pdv_status','sef_enabled','fiscalization_required','cash_register_enabled','bank_accounts_setup','assigned_accountant'];
-  const blockers = missing.filter(r => criticalKeys.includes(r[0]));
-  const percent = Math.round((complete.length / req.length) * 100);
-  return { percent, complete, missing, blockers, formalReady: blockers.length === 0, managementReady: percent >= 55 };
-}
-function companySetupGate() {
-  const ss = setupStatus();
-  if (ss.formalReady) return { label: 'Serbian certification unlocked', tone: 'good', detail: 'Company profile has the required setup for accountant-side Serbian konto/posting certification.' };
-  if (ss.managementReady) return { label: 'Management setup usable', tone: 'warn', detail: `${ss.blockers.length} critical setup item(s) still block formal Serbian accountant certification.` };
-  return { label: 'Setup required', tone: 'bad', detail: 'Complete the company profile before relying on mappings or certification.' };
-}
-function canAccountantCertifySerbian() { return setupStatus().formalReady; }
-function profileTimeline() {
-  const ss = setupStatus();
-  const steps = [
-    ['Identity', ss.missing.some(x => x[2] === 'identity') ? 'Incomplete' : 'Complete'],
-    ['Legal form', ss.missing.some(x => x[2] === 'legal') ? 'Incomplete' : 'Complete'],
-    ['Accounting framework', ss.missing.some(x => x[2] === 'accounting') ? 'Incomplete' : 'Complete'],
-    ['Tax / digital profile', ss.missing.some(x => x[2] === 'tax') ? 'Incomplete' : 'Complete'],
-    ['Bank, cash and operations', ss.missing.some(x => x[2] === 'operations') ? 'Incomplete' : 'Complete'],
-    ['Workflow / accountant assignment', ss.missing.some(x => x[2] === 'workflow') ? 'Incomplete' : 'Complete']
-  ];
-  return `<div class="setup-stepper">${steps.map((s,i)=>`<div class="setup-step ${s[1]==='Complete'?'done':'todo'}"><div class="num">${i+1}</div><div><strong>${esc(s[0])}</strong><div class="mini">${esc(s[1])}</div></div></div>`).join('')}</div>`;
-}
 function renderCompanySetup() {
   const p = companyProfile();
-  const ss = setupStatus();
-  const gate = companySetupGate();
-  const missingRows = ss.missing.map(r => `<tr><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${pill('Missing / not confirmed','warn')}</td></tr>`);
-  const accountsPreview = SERBIAN_ACCOUNT_OPTIONS.slice(0, 16).map(a => `<tr><td><strong>${esc(a[0])}</strong></td><td>${esc(a[1])}</td><td>${a[0] === 'NEEDS_REVIEW' ? pill('Manual','warn') : pill('Available','info')}</td></tr>`);
-  document.getElementById('company_setup').innerHTML = `
+  const st = setupStatus();
+  const sectionRows = SETUP_SECTIONS.map(([k,l]) => `<div class="setup-step ${st.checks[k] ? 'done' : 'todo'}"><div class="setup-dot">${st.checks[k] ? '✓' : '!'}</div><div><strong>${esc(l)}</strong><div class="mini">${st.checks[k] ? 'Complete' : 'Needs input'}</div></div></div>`).join('');
+  const supportText = st.support === 'supported' ? 'Supported by the first Serbian mapping template.' : st.support === 'review' ? 'Likely usable, but accountant should confirm framework.' : st.support === 'special' ? 'Special legal/accounting setup required before formal certification.' : st.support === 'regulated' ? 'Regulated entity: do not use the normal company chart automatically.' : 'Select legal form.';
+  const unlock = serbianProfileReady();
+  document.getElementById('setup').innerHTML = `
     <div class="setup-hero card">
       <div>
         <div class="portal-tag">Company setup • Serbian accounting profile</div>
-        <h2>${esc(p.legal_name || 'New company')}</h2>
-        <p class="muted">This page is the foundation for future Serbian konto mapping. It tells the app which entity type, chart of accounts, tax rules, digital obligations, bank/cash setup, and certification gates apply before accountant-side certification.</p>
+        <h2>${esc(p.legal_name || 'Company profile')}</h2>
+        <p class="muted">This page tells the app which Serbian rules, entity type, chart template, tax profile, and certification controls apply. It is the foundation before mapping imported data to Serbian konta.</p>
       </div>
-      <div class="setup-score"><div class="mini">Setup completeness</div><div class="score-big">${ss.percent}%</div><div class="progress"><span style="width:${ss.percent}%"></span></div>${pill(gate.label, gate.tone)}</div>
+      <div class="setup-score"><div class="score-ring">${st.percent}%</div><div>${pill(st.label, st.tone)}<div class="mini">${esc(st.detail)}</div></div></div>
+    </div>
+    <div class="setup-progress">${sectionRows}</div>
+    <div class="grid two">
+      <div class="card"><h2>1. Identity</h2><p class="muted">Keep the owner view simple, but capture enough identity data to match imports, tax records, SEF records, bank accounts, and accountant review packs later.</p><div class="field-grid">
+        ${inputField('cpLegalName','Legal name',p.legal_name)}
+        ${inputField('cpTradingName','Trading / short name',p.trading_name)}
+        ${inputField('cpCountry','Country',p.country)}
+        ${inputField('cpAddress','Registered address',p.registered_address)}
+        ${inputField('cpEmail','Company email',p.email)}
+        ${inputField('cpMaticni','Matični broj',p.maticni_broj)}
+        ${inputField('cpPib','PIB',p.pib)}
+        ${inputField('cpActivity','Šifra delatnosti / activity code',p.activity_code)}
+      </div></div>
+      <div class="card"><h2>2. Legal form and accounting framework</h2><p class="muted">Legal form and accounting framework are separate. The same UI will later support multiple Serbian frameworks, but only the standard company/cooperative/entrepreneur framework is treated as first-class in this demo.</p><div class="field-grid">
+        ${selectField('cpLegalForm','Legal form',optionList(LEGAL_FORMS_RS,p.legal_form))}
+        ${selectField('cpFramework','Accounting framework',optionList(ACCOUNTING_FRAMEWORKS_RS,p.accounting_framework))}
+        ${selectField('cpChartTemplate','Chart/account template',optionList(CHART_TEMPLATES_RS,p.chart_template))}
+        ${selectField('cpSize','Entity size / reporting size',[['unknown','Unknown / accountant to confirm'],['micro','Micro'],['small','Small'],['medium','Medium'],['large','Large']].map(([v,l])=>`<option value="${v}" ${p.entity_size===v?'selected':''}>${l}</option>`).join(''))}
+        ${inputField('cpBaseCurrency','Base currency',p.base_currency)}
+        ${inputField('cpFyStart','Financial year start',p.fiscal_year_start)}
+        ${inputField('cpFyEnd','Financial year end',p.fiscal_year_end)}
+        ${inputField('cpBasis','Reporting basis',p.reporting_basis)}
+      </div><div class="status-box ${st.support === 'supported' ? 'good' : st.support === 'review' ? 'warn' : 'bad'}"><strong>${esc(st.legal_label)}</strong><div>${esc(supportText)}</div></div></div>
     </div>
     <div class="grid two">
-      <div class="card"><h2>Setup roadmap</h2>${profileTimeline()}<div class="notice ${ss.formalReady ? 'oknotice' : ''}"><strong>Certification gate:</strong> ${esc(gate.detail)}</div><div class="toolbar"><button class="btn primary" onclick="saveCompanyProfile()">Save company setup</button><button class="btn" onclick="loadSerbianDemoProfile()">Load demo Serbian profile</button><button class="btn" onclick="exportCompanySetup()">Export setup JSON</button></div></div>
-      <div class="card"><h2>What this unlocks</h2>
-        <div class="status-box ${ss.managementReady ? 'good' : 'warn'}"><strong>Management-ready analysis</strong><div>Can use owner-facing categories and cash analysis once source data is validated and review blockers are resolved.</div></div>
-        <div class="status-box ${ss.formalReady ? 'good' : 'bad'}"><strong>Serbian accounting-ready certification</strong><div>Requires legal/accounting/tax profile plus accountant-side approval of konto, posting rule, and tax treatment.</div></div>
-        <div class="status-box info"><strong>Future PostgreSQL schema</strong><div>This profile later becomes company_accounting_profile, chart_of_accounts_template, tax_rules, posting_templates, materiality_rules, and user/company permissions.</div></div>
-      </div>
+      <div class="card"><h2>3. Tax and digital obligations</h2><p class="muted">These fields do not replace tax advice. They tell the app what extra checks and evidence it must ask for before formal certification.</p><div class="field-grid">
+        ${selectField('cpPdv','PDV status',yesNoUnknown(p.pdv_status))}
+        ${selectField('cpPdvPeriod','PDV period',[['','Select...'],['monthly','Monthly'],['quarterly','Quarterly'],['not_applicable','Not applicable'],['unknown','Unknown']].map(([v,l])=>`<option value="${v}" ${p.pdv_period===v?'selected':''}>${l}</option>`).join(''))}
+        ${selectField('cpSef','SEF / e-faktura enabled',yesNoUnknown(p.sef_status))}
+        ${selectField('cpFiscal','Fiscalization required',yesNoUnknown(p.fiscalization_status))}
+        ${selectField('cpPayroll','Payroll obligations',yesNoUnknown(p.payroll_required))}
+        ${selectField('cpForeign','Foreign currency transactions',yesNoUnknown(p.foreign_currency))}
+        ${selectField('cpCorporateTax','Corporate income tax',yesNoUnknown(p.corporate_tax))}
+        ${selectField('cpWithholding','Withholding/non-resident payments',yesNoUnknown(p.withholding_tax))}
+      </div></div>
+      <div class="card"><h2>4. Operations, cash and data sources</h2><p class="muted">This lets the import engine know what files and modules to expect for this company.</p><div class="check-grid">
+        ${checkBox('cpBankRsd','RSD bank accounts',p.bank_rsd)} ${checkBox('cpBankEur','EUR/devizni bank account',p.bank_eur)} ${checkBox('cpCashRsd','RSD cash/blagajna',p.cash_rsd)} ${checkBox('cpCashEur','EUR cash/devizna blagajna',p.cash_eur)}
+        ${checkBox('cpExcel','Monthly Excel workbooks',p.has_excel_workbooks)} ${checkBox('cpBankStatements','Bank statements',p.has_bank_statements)} ${checkBox('cpInvoices','Invoices / SEF later',p.has_invoices)} ${checkBox('cpBills','Supplier bills',p.has_bills)}
+        ${checkBox('cpContracts','Contracts',p.has_contracts)} ${checkBox('cpPayrollFiles','Payroll files',p.has_payroll)} ${checkBox('cpStudents','Student/customer payments',p.has_student_payments)} ${checkBox('cpInventory','Inventory / POS / fiscal receipts',p.has_inventory_pos)}
+        ${checkBox('cpIntercompany','Intercompany / related-party transactions',p.has_intercompany)}
+      </div>${inputField('cpFxSource','FX rate source',p.fx_rate_source)}</div>
     </div>
-    <div class="card"><h2>1. Company identity</h2><div class="field-grid">
-      ${profileInput('cp_legal_name','Legal name',p.legal_name,'Example: ABC DOO Beograd')}
-      ${profileInput('cp_trading_name','Trading / short name',p.trading_name,'Example: ABC')}
-      ${profileInput('cp_country','Country',p.country,'Serbia')}
-      ${profileSelect('cp_legal_form','Legal form / entity type',p.legal_form,LEGAL_FORMS_RS,'This is the registered legal form. Special regulated entities will need a separate chart/profile.')}
-      ${profileInput('cp_maticni','Matični broj',p.maticni_broj,'8-digit registration number')}
-      ${profileInput('cp_pib','PIB',p.pib,'Tax identification number')}
-      ${profileInput('cp_activity','Šifra delatnosti / activity code',p.activity_code,'Example: 8542')}
-      ${profileInput('cp_incorporation','Incorporation date',p.incorporation_date,'YYYY-MM-DD')}
-    </div></div>
-    <div class="card"><h2>2. Accounting framework</h2><div class="field-grid">
-      ${profileSelect('cp_framework','Accounting framework',p.accounting_framework,ACCOUNTING_FRAMEWORKS_RS,'This decides which chart/accounting rules the mapping engine should use.')}
-      ${profileInput('cp_chart_template','Chart of accounts template',p.chart_template,'Example: RS Kontni okvir 89/2020 - privredna društva')}
-      ${profileInput('cp_reporting_standard','Reporting standard / basis',p.reporting_standard,'Serbian statutory accounting')}
-      ${profileSelect('cp_classification','Company size classification',p.company_classification,COMPANY_CLASSIFICATIONS)}
-      ${profileInput('cp_base_currency','Base currency',p.base_currency,'RSD')}
-      ${profileInput('cp_fy_start','Fiscal year start',p.fiscal_year_start,'MM-DD')}
-      ${profileInput('cp_fy_end','Fiscal year end',p.fiscal_year_end,'MM-DD')}
-      ${profileInput('cp_entity_note','Entity setup note',p.entity_type_note,'Any special setup note from accountant')}
-    </div></div>
-    <div class="card"><h2>3. Serbian tax and digital obligations</h2><div class="field-grid">
-      ${profileSelect('cp_pdv_status','PDV registered?',p.pdv_status,YES_NO_UNKNOWN)}
-      ${profileSelect('cp_pdv_period','PDV period',p.pdv_period,PDV_PERIODS)}
-      ${profileSelect('cp_sef','SEF / e-faktura enabled?',p.sef_enabled,YES_NO_UNKNOWN)}
-      ${profileSelect('cp_fiscalization','Fiscalization required?',p.fiscalization_required,YES_NO_UNKNOWN)}
-      ${profileSelect('cp_payroll','Payroll obligations?',p.payroll_enabled,YES_NO_UNKNOWN)}
-      ${profileSelect('cp_foreign_currency','Foreign currency transactions?',p.foreign_currency_enabled,YES_NO_UNKNOWN)}
-      ${profileSelect('cp_cash_register','Cash register / blagajna?',p.cash_register_enabled,YES_NO_UNKNOWN)}
-      ${profileSelect('cp_bank_setup','Bank/cash accounts setup',p.bank_accounts_setup,[['unknown','Unknown'],['not_started','Not started'],['partial','Partial'],['complete','Complete']])}
-    </div></div>
-    <div class="card"><h2>4. Workflow, thresholds, and certification controls</h2><div class="field-grid">
-      ${profileInput('cp_accountant','Assigned accountant / reviewer',p.assigned_accountant,'Accountant Reviewer')}
-      ${profileInput('cp_senior','Senior reviewer / controller',p.senior_reviewer,'Optional')}
-      ${profileInput('cp_owner_contact','Owner contact',p.owner_contact,'Business Owner')}
-      ${profileNumber('cp_materiality','Materiality threshold RSD',p.materiality_threshold_rsd,'50000','Above this amount, issues should not be auto-cleared.')}
-      ${profileNumber('cp_high_value','High-value threshold RSD',p.high_value_threshold_rsd,'250000','Requires senior/accountant attention.')}
-      ${profileNumber('cp_auto_map','Auto-map threshold %',p.auto_map_threshold_percent,'90','Confidence threshold before suggesting automatic mapping.')}
-      <div class="field" style="grid-column:1/-1"><label>Setup notes</label><textarea id="cp_notes">${esc(p.notes || '')}</textarea></div>
-    </div></div>
     <div class="grid two">
-      <div class="card"><h2>Missing setup items</h2>${missingRows.length ? table(['Item','Area','Status'], missingRows) : '<div class="notice oknotice">All required setup items are complete for the current demo gate.</div>'}</div>
-      <div class="card"><h2>Serbian konto preview</h2><p class="muted">This preview is only a starting list. v1.2 should turn this into a searchable Serbian chart-of-accounts mapping dictionary with accountant-approved posting rules.</p>${table(['Konto','Name','Status'], accountsPreview)}</div>
-    </div>
-  `;
+      <div class="card"><h2>5. Accountant workflow and controls</h2><p class="muted">These settings help the accountant side stay exception-driven rather than row-by-row manual review.</p><div class="field-grid">
+        ${inputField('cpOwnerContact','Owner contact',p.owner_contact)}
+        ${inputField('cpAccountant','Assigned accountant / team',p.accountant_assigned)}
+        ${inputField('cpSenior','Senior reviewer / controller',p.senior_reviewer)}
+        ${selectField('cpManaged','Managed by your internal accountant team',yesNoUnknown(p.managed_by_internal_team))}
+        ${inputField('cpMateriality','Materiality threshold RSD',p.materiality_threshold,'type="number" step="1"')}
+        ${inputField('cpHighValue','High-value threshold RSD',p.high_value_threshold,'type="number" step="1"')}
+        ${inputField('cpFxTolerance','FX/balance tolerance RSD',p.fx_tolerance,'type="number" step="0.01"')}
+        ${selectField('cpAutoMap','Auto-map policy',[['after_accountant_approval','After accountant approval'],['suggest_only','Suggest only'],['disabled','Disabled until database phase']].map(([v,l])=>`<option value="${v}" ${p.auto_map_allowed===v?'selected':''}>${l}</option>`).join(''))}
+        <div class="field" style="grid-column:1/-1"><label>Setup notes</label><textarea id="cpNotes">${esc(p.setup_notes || '')}</textarea></div>
+      </div></div>
+      <div class="card"><h2>Certification gate</h2><div class="status-box ${unlock ? 'good' : 'warn'}"><strong>${unlock ? 'Serbian account certification unlocked' : 'Serbian account certification locked'}</strong><div>${unlock ? 'The app can allow accountant-certified status in the demo. Serbian konto suggestions, posting treatments, and tax/PDV/SEF fields are active in the Review Center.' : 'The app can still import, review, and mark data management-ready. Complete this setup before final Serbian konto/posting/tax certification.'}</div></div>
+      <div class="source-box"><h3>What this setup will control later</h3><ul><li>Which Serbian Kontni okvir is used.</li><li>Which konta appear in the Review Center.</li><li>Whether PDV/SEF/fiscalization checks are required.</li><li>Whether payroll, owner payments, FX, and contracts require accountant review.</li><li>Whether the owner sees management-ready or accountant-certified confidence labels.</li></ul></div>
+      <div class="toolbar"><button class="btn primary" onclick="saveCompanySetup()">Save company setup</button><button class="btn" onclick="applyUniversitySetupPreset()">Apply university demo preset</button><button class="btn warn" onclick="resetCompanySetup()">Reset setup</button></div></div>
+    </div>`;
 }
-function saveCompanyProfile() {
-  STATE.companyProfile = {
-    ...companyProfile(),
-    legal_name: document.getElementById('cp_legal_name').value,
-    trading_name: document.getElementById('cp_trading_name').value,
-    country: document.getElementById('cp_country').value,
-    legal_form: document.getElementById('cp_legal_form').value,
-    entity_type_note: document.getElementById('cp_entity_note').value,
-    maticni_broj: document.getElementById('cp_maticni').value,
-    pib: document.getElementById('cp_pib').value,
-    activity_code: document.getElementById('cp_activity').value,
-    incorporation_date: document.getElementById('cp_incorporation').value,
-    accounting_framework: document.getElementById('cp_framework').value,
-    chart_template: document.getElementById('cp_chart_template').value,
-    reporting_standard: document.getElementById('cp_reporting_standard').value,
-    company_classification: document.getElementById('cp_classification').value,
-    base_currency: document.getElementById('cp_base_currency').value,
-    fiscal_year_start: document.getElementById('cp_fy_start').value,
-    fiscal_year_end: document.getElementById('cp_fy_end').value,
-    pdv_status: document.getElementById('cp_pdv_status').value,
-    pdv_period: document.getElementById('cp_pdv_period').value,
-    sef_enabled: document.getElementById('cp_sef').value,
-    fiscalization_required: document.getElementById('cp_fiscalization').value,
-    payroll_enabled: document.getElementById('cp_payroll').value,
-    foreign_currency_enabled: document.getElementById('cp_foreign_currency').value,
-    cash_register_enabled: document.getElementById('cp_cash_register').value,
-    bank_accounts_setup: document.getElementById('cp_bank_setup').value,
-    assigned_accountant: document.getElementById('cp_accountant').value,
-    senior_reviewer: document.getElementById('cp_senior').value,
-    owner_contact: document.getElementById('cp_owner_contact').value,
-    materiality_threshold_rsd: Number(document.getElementById('cp_materiality').value || 0),
-    high_value_threshold_rsd: Number(document.getElementById('cp_high_value').value || 0),
-    auto_map_threshold_percent: Number(document.getElementById('cp_auto_map').value || 0),
-    notes: document.getElementById('cp_notes').value,
-    updated_at: now()
-  };
-  audit('company_profile_saved', { setup_percent: setupStatus().percent, formal_ready: setupStatus().formalReady });
-  saveState(); renderAll(); setActiveSection('company_setup');
+function checkBox(id, label, value) { return `<label class="setup-check"><input id="${esc(id)}" type="checkbox" ${checked(value)}><span>${esc(label)}</span></label>`; }
+function readBool(id) { return !!document.getElementById(id)?.checked; }
+function readVal(id) { return document.getElementById(id)?.value ?? ''; }
+function saveCompanySetup() {
+  STATE.companyProfile = mergeProfile({
+    legal_name: readVal('cpLegalName'), trading_name: readVal('cpTradingName'), country: readVal('cpCountry'), registered_address: readVal('cpAddress'), email: readVal('cpEmail'), maticni_broj: readVal('cpMaticni'), pib: readVal('cpPib'), activity_code: readVal('cpActivity'),
+    legal_form: readVal('cpLegalForm'), accounting_framework: readVal('cpFramework'), chart_template: readVal('cpChartTemplate'), entity_size: readVal('cpSize'), base_currency: readVal('cpBaseCurrency'), fiscal_year_start: readVal('cpFyStart'), fiscal_year_end: readVal('cpFyEnd'), reporting_basis: readVal('cpBasis'),
+    pdv_status: readVal('cpPdv'), pdv_period: readVal('cpPdvPeriod'), sef_status: readVal('cpSef'), fiscalization_status: readVal('cpFiscal'), payroll_required: readVal('cpPayroll'), foreign_currency: readVal('cpForeign'), corporate_tax: readVal('cpCorporateTax'), withholding_tax: readVal('cpWithholding'),
+    bank_rsd: readBool('cpBankRsd'), bank_eur: readBool('cpBankEur'), cash_rsd: readBool('cpCashRsd'), cash_eur: readBool('cpCashEur'), has_excel_workbooks: readBool('cpExcel'), has_bank_statements: readBool('cpBankStatements'), has_invoices: readBool('cpInvoices'), has_bills: readBool('cpBills'), has_contracts: readBool('cpContracts'), has_payroll: readBool('cpPayrollFiles'), has_student_payments: readBool('cpStudents'), has_inventory_pos: readBool('cpInventory'), has_intercompany: readBool('cpIntercompany'), fx_rate_source: readVal('cpFxSource'),
+    owner_contact: readVal('cpOwnerContact'), accountant_assigned: readVal('cpAccountant'), senior_reviewer: readVal('cpSenior'), managed_by_internal_team: readVal('cpManaged'), materiality_threshold: Number(readVal('cpMateriality') || 0), high_value_threshold: Number(readVal('cpHighValue') || 0), fx_tolerance: Number(readVal('cpFxTolerance') || 0), auto_map_allowed: readVal('cpAutoMap'), setup_notes: readVal('cpNotes'), setup_saved_at: now()
+  });
+  audit('company_setup_saved', { profile: STATE.companyProfile, readiness: setupStatus() }); saveState(); renderAll(); setActiveSection('setup');
 }
-function loadSerbianDemoProfile() {
-  STATE.companyProfile = { ...companyProfile(), legal_form: 'do_o', maticni_broj: 'DEMO-00000000', pib: 'DEMO-PIB', activity_code: '8542', accounting_framework: 'rs_privredna_drustva_zadruge_preduzetnici', chart_template: 'RS Kontni okvir 89/2020 - privredna društva, zadruge i preduzetnici', company_classification: 'small', pdv_status: 'no', pdv_period: 'not_applicable', sef_enabled: 'unknown', fiscalization_required: 'unknown', payroll_enabled: 'yes', foreign_currency_enabled: 'yes', cash_register_enabled: 'yes', bank_accounts_setup: 'partial', assigned_accountant: 'Accountant Reviewer', owner_contact: 'Business Owner', notes: 'Demo profile loaded. Accountant still needs to confirm real legal form, PDV/SEF/fiscalization status, and whether education-specific treatment applies.', updated_at: now() };
-  audit('demo_serbian_profile_loaded', { setup_percent: setupStatus().percent });
-  saveState(); renderAll(); setActiveSection('company_setup');
+function applyUniversitySetupPreset() {
+  STATE.companyProfile = mergeProfile({ legal_name: 'University Demo', trading_name: 'University Demo', country: 'Serbia', legal_form: 'doo', accounting_framework: 'rs_privredna_drustva_zadruge_preduzetnici', chart_template: 'standard_rs_2020_privredna', base_currency: 'RSD', fiscal_year_start: '01-01', fiscal_year_end: '12-31', pdv_status: 'unknown', pdv_period: 'unknown', sef_status: 'unknown', fiscalization_status: 'unknown', payroll_required: 'yes', foreign_currency: 'yes', corporate_tax: 'yes', withholding_tax: 'unknown', bank_rsd: true, bank_eur: true, cash_rsd: true, cash_eur: true, has_excel_workbooks: true, has_bank_statements: true, has_payroll: true, has_student_payments: true, has_contracts: true, accountant_assigned: 'Internal Accountant Team', senior_reviewer: 'Senior Accountant', owner_contact: 'Business Owner', materiality_threshold: 50000, high_value_threshold: 250000, fx_tolerance: 1, auto_map_allowed: 'after_accountant_approval', setup_notes: 'Demo preset only. Confirm real legal form, PDV/SEF/fiscalization status, and chart template before formal certification.', setup_saved_at: now() });
+  audit('company_setup_preset_applied', { profile: STATE.companyProfile }); saveState(); renderAll(); setActiveSection('setup');
 }
-function exportCompanySetup() {
-  download(`company_setup_serbia_${new Date().toISOString().slice(0,10)}.json`, { exported_at: now(), app: 'Ask Your Business Company Setup Demo', version: APP_VERSION, company_code: DATA.company_code, company_profile: companyProfile(), setup_status: setupStatus(), certification_gate: companySetupGate(), serbian_accounts_preview: SERBIAN_ACCOUNT_OPTIONS, posting_treatments: POSTING_TREATMENTS_RS, tax_treatments: TAX_TREATMENTS_RS });
-}
-function serbianAccountDatalist() {
-  return `<datalist id="serbianAccountOptions">${SERBIAN_ACCOUNT_OPTIONS.map(a => `<option value="${esc(a[0] + ' - ' + a[1])}"></option>`).join('')}</datalist>`;
-}
-function parseAccountCode(v) {
-  const m = String(v || '').match(/^([0-9A-Z_]+)/);
-  return m ? m[1] : '';
-}
-function serbianMappingPanel(prefix, source = {}) {
-  const accountValue = source.serbian_account_code ? `${source.serbian_account_code} - ${source.serbian_account_name || ''}` : '';
-  return `<div class="serbian-map-panel"><h3>Serbian accounting mapping</h3>${serbianAccountDatalist()}<p class="muted">Use this for accountant-side certification. Management-ready can be used without final konto approval, but accountant-certified should require company setup + konto + posting/tax treatment.</p><div class="field-grid"><div class="field"><label>Suggested Serbian konto</label><input id="${prefix}SerbianAccount" list="serbianAccountOptions" value="${esc(accountValue)}" placeholder="Search by konto or name"></div><div class="field"><label>Posting treatment</label><select id="${prefix}PostingTreatment">${optionTags(POSTING_TREATMENTS_RS, source.posting_treatment || 'needs_accountant_review')}</select></div><div class="field"><label>Tax / PDV / SEF treatment</label><select id="${prefix}TaxTreatment">${optionTags(TAX_TREATMENTS_RS, source.tax_treatment || 'not_assessed')}</select></div><div class="field"><label>Certification note</label><input id="${prefix}KontoNote" value="${esc(source.konto_note || '')}" placeholder="Why this konto/treatment is appropriate"></div></div></div>`;
-}
-function readSerbianFields(prefix) {
-  const raw = document.getElementById(prefix + 'SerbianAccount')?.value || '';
-  const code = parseAccountCode(raw);
-  const opt = SERBIAN_ACCOUNT_OPTIONS.find(a => a[0] === code);
-  return { serbian_account_raw: raw, serbian_account_code: code, serbian_account_name: opt ? opt[1] : raw.replace(code, '').replace(/^\s*-\s*/, ''), posting_treatment: document.getElementById(prefix + 'PostingTreatment')?.value || '', tax_treatment: document.getElementById(prefix + 'TaxTreatment')?.value || '', konto_note: document.getElementById(prefix + 'KontoNote')?.value || '' };
-}
+function resetCompanySetup() { if (confirm('Reset company setup profile in this browser?')) { STATE.companyProfile = defaultCompanyProfile(); audit('company_setup_reset', {}); saveState(); renderAll(); setActiveSection('setup'); } }
 
 function renderOwnerPortal() {
   const a = adjSummary();
   const totalTasks = openTasks().length;
   const mgAll = managementStatus();
   const fmAll = formalStatus();
+  const setup = setupStatus();
   const currentCompany = 'University Demo';
   const cards = [
     kpi('Current cash shown', money(a.closing), 'Latest imported management view', a.closing >= 0 ? 'pos' : 'neg'),
@@ -909,7 +824,7 @@ function renderOwnerPortal() {
         <p class="muted">This view hides accounting complexity. It shows only what you need to know: business status, cash movement, questions for you, and whether accountant certification is still pending.</p>
       </div>
       <div class="owner-status-stack">
-        ${pill(mgAll.label, mgAll.tone)} ${pill(fmAll.label, fmAll.tone)} ${pill(totalTasks ? 'Owner action needed' : 'No owner action', totalTasks ? 'warn' : 'good')}
+        ${pill(mgAll.label, mgAll.tone)} ${pill(fmAll.label, fmAll.tone)} ${pill(setup.label, setup.tone)} ${pill(totalTasks ? 'Owner action needed' : 'No owner action', totalTasks ? 'warn' : 'good')}
       </div>
     </div>
     ${headline}
@@ -918,6 +833,7 @@ function renderOwnerPortal() {
       <div class="card"><h2>Plain-English status</h2>
         <div class="status-box ${mgAll.tone}"><strong>Business view</strong><div>${esc(mgAll.detail)}</div></div>
         <div class="status-box ${fmAll.tone}"><strong>Accounting view</strong><div>${esc(fmAll.detail)}</div></div>
+        <div class="status-box ${setup.tone}"><strong>Company setup</strong><div>${esc(setup.detail)}</div><button class="btn" onclick="setActiveSection('setup')">Open company setup</button></div>
         <div class="notice"><strong>Important:</strong> management-ready data is useful for business decisions and visibility. Accountant-certified data is needed for formal accounting, tax, or statutory reporting.</div>
       </div>
       <div class="card"><h2>What you need to do</h2>${ownerTasks || '<div class="notice oknotice">Nothing right now. Your accountant team is handling the review work.</div>'}</div>
@@ -931,6 +847,7 @@ function renderOwnerPortal() {
 function renderAccountantWorkbench() {
   const st = stats();
   const a = adjSummary();
+  const setup = setupStatus();
   const tasks = openTasks();
   const pending = scopeItems().filter(needsAccountantWork);
   const issueGroups = groupOpenIssues();
@@ -956,7 +873,7 @@ function renderAccountantWorkbench() {
       <div>
         <div class="portal-tag">Accountant operations center • one-company workflow first</div>
         <h2>Make data ready with exception-only review</h2>
-        <p class="muted">This side is designed for your accountant team: apply templates, review only exceptions, ask the owner only for business context, mark management-ready, and later accountant-certify the period.</p>
+        <p class="muted">This side is designed for your accountant team: apply templates, review only exceptions, ask the owner only for business context, mark management-ready, and later accountant-certify the period.</p><div class="status-box ${setup.tone}"><strong>Company setup: ${esc(setup.label)}</strong><div>${esc(setup.detail)}</div></div>
       </div>
       <div class="portal-actions">
         <button class="btn primary" onclick="setActiveSection('review')">Open exception queue</button>
@@ -1088,13 +1005,27 @@ function renderTxTable() {
   document.getElementById('txTable').innerHTML = table(['Period', 'ID', 'Date', 'Direction', 'Method', 'Amount', 'Raw category', 'Mapped category', 'Report group', 'Description', 'Source', 'Status'], rows);
 }
 function renderMapping() {
-  const rules = (STATE.mappingRules || []).map(r => `<tr><td>${esc(r.period || 'ALL')}</td><td>${pill(r.direction)}</td><td>${esc(r.raw_category)}</td><td>${esc(r.suggested_category)}</td><td>${esc(r.report_group)}</td><td>${esc(r.created_from_review_item_id)}</td><td>${esc(r.reviewer)}</td><td>${esc(r.created_at)}</td></tr>`);
-  const base = scopeMonths().flatMap(m => m.mapping_suggestions).map(x => `<tr><td>${x.period}</td><td>${pill(x.direction)}</td><td>${esc(x.raw_category)}</td><td>${esc(x.suggested_category)}</td><td>${esc(x.report_group)}</td><td>${x.rows_affected}</td><td>${money(x.total_rsd_equivalent)}</td><td>${pill(x.confidence)}</td></tr>`);
+  const rules = (STATE.mappingRules || []).map(r => `<tr><td>${esc(r.period || 'ALL')}</td><td>${pill(r.direction)}</td><td>${esc(r.raw_category)}</td><td>${esc(r.suggested_category)}</td><td>${esc(r.report_group)}</td><td>${esc(r.serbian_account_code || '')}</td><td>${esc(r.posting_treatment || '')}</td><td>${esc(r.tax_treatment || '')}</td><td>${esc(r.reviewer)}</td><td>${esc(r.created_at)}</td></tr>`);
+  const base = scopeMonths().flatMap(m => m.mapping_suggestions).map(x => {
+    const sug = suggestSerbianAccount({ raw_category:x.raw_category, suggested_category:x.suggested_category, report_group:x.report_group, direction:x.direction });
+    return `<tr><td>${x.period}</td><td>${pill(x.direction)}</td><td>${esc(x.raw_category)}</td><td>${esc(x.suggested_category)}</td><td>${esc(x.report_group)}</td><td>${esc(sug.code || '')}</td><td>${esc(sug.name || '')}</td><td>${x.rows_affected}</td><td>${money(x.total_rsd_equivalent)}</td><td>${pill(x.confidence)}</td></tr>`;
+  });
   const suggestionRows = categorySuggestionRows().map(x => `<tr><td>${esc(x.category)}</td><td>${pill(x.source, x.source.includes('local') ? 'purple' : 'info')}</td></tr>`);
-  const accountRows = SERBIAN_ACCOUNT_OPTIONS.map(a => `<tr><td><strong>${esc(a[0])}</strong></td><td>${esc(a[1])}</td><td>${a[0] === 'NEEDS_REVIEW' ? pill('Manual review','warn') : pill('Selectable','info')}</td></tr>`);
-  const txMapped = Object.entries(STATE.txOverrides || {}).filter(([id,t]) => t.serbian_account_code).map(([id,t]) => `<tr><td>${esc(id)}</td><td>${esc(t.suggested_category || '')}</td><td>${esc(t.serbian_account_code || '')}</td><td>${esc(t.serbian_account_name || '')}</td><td>${esc(t.posting_treatment || '')}</td><td>${esc(t.tax_treatment || '')}</td><td>${esc(t.konto_note || '')}</td></tr>`);
-  const ctrlMapped = Object.entries(STATE.controlOverrides || {}).filter(([id,c]) => c.serbian_account_code).map(([id,c]) => `<tr><td>${esc(id)}</td><td>${esc(c.affected_report_line || '')}</td><td>${esc(c.serbian_account_code || '')}</td><td>${esc(c.serbian_account_name || '')}</td><td>${esc(c.posting_treatment || '')}</td><td>${esc(c.tax_treatment || '')}</td><td>${esc(c.konto_note || '')}</td></tr>`);
-  document.getElementById('mapping').innerHTML = `<div class="card"><h2>Serbian konto mapping layer</h2><p class="muted">v1.1 adds a first Serbian accounting profile and konto suggestion layer. These selectable konta are only a starting framework; accountant certification should approve the konto, posting treatment, and tax/PDV/SEF treatment.</p><div class="toolbar"><button class="btn" onclick="setActiveSection('company_setup')">Open Company Setup</button><button class="btn" onclick="exportCompanySetup()">Export company setup</button></div>${table(['Konto','Name','Status'], accountRows)}</div><div class="card"><h2>Reviewed Serbian account mappings</h2>${txMapped.length || ctrlMapped.length ? table(['Item','Category / line','Konto','Konto name','Posting','Tax treatment','Note'], [...txMapped, ...ctrlMapped]) : '<div class="notice">No Serbian konto mappings have been saved yet. Open a review item and use the Serbian accounting mapping section.</div>'}</div><div class="card"><h2>Mapped category dropdown suggestions</h2><p class="muted">These are the categories shown in the mapped-category dropdown inside the review popup. The list combines default categories, previous import mappings, normalized transactions, approved mapping rules, and new categories typed during review.</p>${table(['Mapped category suggestion', 'Source'], suggestionRows)}</div><div class="card"><h2>Approved mapping rules created during review</h2>${rules.length ? table(['Period', 'Direction', 'Raw category', 'Mapped category', 'Report group', 'From item', 'Reviewer', 'Created'], rules) : '<div class="notice">No local mapping rules created yet.</div>'}</div><div class="card"><h2>Original mapping suggestions</h2>${table(['Period', 'Direction', 'Raw category', 'Suggested category', 'Report group', 'Rows', 'Total', 'Confidence'], base)}</div>`;
+  document.getElementById('mapping').innerHTML = `<div class="card"><h2>Mapped category dropdown suggestions</h2><p class="muted">These are the categories shown in the mapped-category dropdown inside the review popup. The list combines default categories, previous import mappings, normalized transactions, approved mapping rules, and new categories typed during review.</p>${table(['Mapped category suggestion', 'Source'], suggestionRows)}</div><div class="card"><h2>Approved mapping rules created during review</h2><p class="muted">In v1.2, reusable mapping rules can carry the management category, Serbian konto, posting treatment, and tax/evidence treatment.</p>${rules.length ? table(['Period', 'Direction', 'Raw category', 'Mapped category', 'Report group', 'Serbian konto', 'Posting', 'Tax/PDV/SEF', 'Reviewer', 'Created'], rules) : '<div class="notice">No local mapping rules created yet.</div>'}</div><div class="card"><h2>Original mapping suggestions + Serbian konto suggestions</h2><p class="muted">These suggestions are not final postings. They are a starting point for accountant review.</p>${table(['Period', 'Direction', 'Raw category', 'Suggested category', 'Report group', 'Suggested konto', 'Konto name', 'Rows', 'Total', 'Confidence'], base)}</div>`;
+}
+function renderSerbianCOA() {
+  const rows = SERBIAN_ACCOUNTS.filter(a => {
+    const q = String(COA_UI.q || '').toLowerCase();
+    if (COA_UI.type && a.type !== COA_UI.type) return false;
+    if (COA_UI.klass && a.klass !== COA_UI.klass) return false;
+    if (COA_UI.risk && a.risk !== COA_UI.risk) return false;
+    if (q && !JSON.stringify(a).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const summary = ['asset','liability','equity','expense','income','review'].map(t => `${t}: ${SERBIAN_ACCOUNTS.filter(a=>a.type===t).length}`).join(' • ');
+  const rules = RAW_TO_KONTO_RULES.map(r => `<tr><td>${esc(String(r.pattern).replace(/^\//,'').replace(/\/[a-z]*$/,''))}</td><td>${esc(r.direction || 'any')}</td><td>${esc(r.code)}</td><td>${esc(accountLabel(r.code))}</td><td>${esc(r.reason)}</td></tr>`);
+  const body = rows.map(a => `<tr><td><strong>${esc(a.code)}</strong></td><td>${esc(a.name)}</td><td>${esc(a.klass)}</td><td>${esc(a.group)}</td><td>${pill(a.type)}</td><td>${esc(a.owner_label)}</td><td>${esc(a.default_use)}</td><td>${pill(a.risk, a.risk === 'always_review' ? 'bad' : a.risk === 'review' ? 'warn' : 'good')}</td></tr>`);
+  document.getElementById('coa').innerHTML = `<div class="card"><h2>Serbian Chart of Accounts Dictionary v1.2</h2><p class="muted">Searchable starter dictionary for Serbia. It includes common asset/liability/equity accounts plus the cost and income classes needed for mapping imported rows to Serbian konta. This is a demo data dictionary; your Serbian accountant must confirm the final chart template and company-specific analytical accounts.</p><div class="notice">Dictionary summary: ${esc(summary)}. The app uses this table in the Review Center popup to suggest konto, posting treatment, and tax/evidence treatment.</div><div class="toolbar"><input placeholder="Search konto, name, owner label, group..." value="${esc(COA_UI.q)}" oninput="setCoaFilter('q', this.value)"><select onchange="setCoaFilter('type', this.value)"><option value="">All types</option>${['asset','liability','equity','expense','income','review'].map(v=>`<option value="${v}" ${COA_UI.type===v?'selected':''}>${v}</option>`).join('')}</select><select onchange="setCoaFilter('klass', this.value)"><option value="">All classes</option>${['0','1','2','3','4','5','6','X'].map(v=>`<option value="${v}" ${COA_UI.klass===v?'selected':''}>Class ${v}</option>`).join('')}</select><select onchange="setCoaFilter('risk', this.value)"><option value="">All review levels</option>${['normal','review','always_review'].map(v=>`<option value="${v}" ${COA_UI.risk===v?'selected':''}>${v}</option>`).join('')}</select><button class="btn" onclick="exportSerbianDictionary()">Export Serbian dictionary</button></div>${table(['Konto','Name','Class','Group','Type','Owner label','Default use','Review'], body)}</div><div class="card"><h2>Raw-category rules used for first suggestions</h2><p class="muted">These are practical automation rules. They reduce work, but accountant certification is still required for formal Serbian posting.</p>${table(['Pattern','Direction','Suggested konto','Konto label','Reason'], rules)}</div>`;
 }
 function renderValidation() {
   const rows = scopeMonths().flatMap(m => m.validation_results).map(v => {
@@ -1111,8 +1042,7 @@ function renderCert() {
     const certDisabled = s.formal_blocking > 0 || selected === 'ALL';
     return `<tr><td>${m.label}</td><td>${pill(mg.label, mg.tone)}</td><td>${pill(fm.label, fm.tone)}</td><td>${s.management_blocking}</td><td>${s.formal_blocking}</td><td>${localQuality(m.period).toFixed(1)}/100</td><td>${bs.management_ready ? esc(bs.management_ready_at || '') : ''}</td><td>${bs.accountant_certified ? esc(bs.accountant_certified_at || '') : ''}</td><td>${selected === 'ALL' ? '<span class="mini">Choose one month</span>' : `<button class="btn purpleBtn" ${mgDisabled ? 'disabled' : ''} onclick="markMonthManagementReady()">Mark management-ready</button> <button class="btn good" ${certDisabled ? 'disabled' : ''} onclick="certifyMonthAccountant()">Accountant certify</button>`}</td></tr>`;
   });
-  const gate = companySetupGate();
-  document.getElementById('certification').innerHTML = `<div class="card"><h2>Batch status and certification</h2><p class="muted">Management-ready means the owner can use dashboards with warnings. Accountant-certified means professional/accounting review is complete for that period.</p><div class="status-box ${gate.tone}"><strong>Company setup gate</strong><div>${esc(gate.detail)}</div><button class="btn" onclick="setActiveSection('company_setup')">Open Company Setup</button></div>${table(['Month', 'Management status', 'Accountant status', 'Mgmt blockers', 'Formal blockers', 'Quality', 'Management-ready at', 'Certified at', 'Action'], rows)}</div>`;
+  document.getElementById('certification').innerHTML = `<div class="card"><h2>Batch status and certification</h2><p class="muted">Management-ready means the owner can use dashboards with warnings. Accountant-certified means professional/accounting review is complete for that period.</p>${table(['Month', 'Management status', 'Accountant status', 'Mgmt blockers', 'Formal blockers', 'Quality', 'Management-ready at', 'Certified at', 'Action'], rows)}</div>`;
 }
 
 function renderAssistant() {
@@ -1339,13 +1269,13 @@ function openModal(id) {
 function transactionForm(i, tx) {
   const e = effTx(tx);
   const lists = suggestionDatalists();
-  return `<div><h3>Editable transaction fields</h3>${lists}<input type="hidden" id="txId" value="${esc(e.transaction_id)}"><div class="field-grid"><div class="field"><label>Date</label><input id="txDate" value="${esc(e.date)}"></div><div class="field"><label>Direction</label><select id="txDirection"><option value="inflow" ${e.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${e.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Payment method</label><input id="txPayment" value="${esc(e.payment_method)}"></div><div class="field"><label>Currency</label><input id="txCurrency" value="${esc(e.currency_original)}"></div><div class="field"><label>Amount RSD equivalent</label><input id="txAmount" type="number" step="0.01" value="${Number(e.amount_rsd_equivalent || 0)}"></div><div class="field"><label>Raw category</label><input id="txRaw" value="${esc(e.raw_category)}"></div>${categoryInput('txCat', 'Mapped / management category', e.suggested_category)}${reportGroupInput('txGroup', 'Report group', e.report_group)}<div class="field" style="grid-column:1/-1">${serbianMappingPanel('tx', e)}</div><div class="field"><label>Counterparty type</label><input id="txCpType" value="${esc(e.counterparty_type)}"></div><div class="field"><label>Counterparty token</label><input id="txCp" value="${esc(e.counterparty)}"></div><div class="field" style="grid-column:1/-1"><label>Description</label><textarea id="txDesc">${esc(e.description)}</textarea></div></div><label class="checkbox"><input type="checkbox" id="createMappingRule"><span>Create/update a reusable mapping rule from this row. The mapped category is saved to suggestions even if this is not ticked.</span></label></div>`;
+  return `<div><h3>Editable transaction fields</h3>${lists}<input type="hidden" id="txId" value="${esc(e.transaction_id)}"><div class="field-grid"><div class="field"><label>Date</label><input id="txDate" value="${esc(e.date)}"></div><div class="field"><label>Direction</label><select id="txDirection"><option value="inflow" ${e.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${e.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Payment method</label><input id="txPayment" value="${esc(e.payment_method)}"></div><div class="field"><label>Currency</label><input id="txCurrency" value="${esc(e.currency_original)}"></div><div class="field"><label>Amount RSD equivalent</label><input id="txAmount" type="number" step="0.01" value="${Number(e.amount_rsd_equivalent || 0)}"></div><div class="field"><label>Raw category</label><input id="txRaw" value="${esc(e.raw_category)}"></div>${categoryInput('txCat', 'Mapped / management category', e.suggested_category)}${reportGroupInput('txGroup', 'Report group', e.report_group)}<div class="field"><label>Counterparty type</label><input id="txCpType" value="${esc(e.counterparty_type)}"></div><div class="field"><label>Counterparty token</label><input id="txCp" value="${esc(e.counterparty)}"></div><div class="field" style="grid-column:1/-1"><label>Description</label><textarea id="txDesc">${esc(e.description)}</textarea></div></div>${serbianMappingForm('tx', e, i)}<label class="checkbox"><input type="checkbox" id="createMappingRule"><span>Create/update a reusable mapping rule from this row. The mapped category, report group, Serbian konto, posting treatment, and tax treatment are saved for future automation.</span></label></div>`;
 }
 function controlForm(i) {
   const val = valById(i.related_object_id), c = STATE.controlOverrides[i.review_item_id] || {}, a = STATE.manualAdjustments[i.review_item_id] || {};
   const diff = (c.difference_amount ?? Number(val?.difference || 0)) || 0;
   const lists = suggestionDatalists();
-  return `<div><h3>Editable validation / control issue</h3>${lists}<input type="hidden" id="ctrlIssueId" value="${esc(i.review_item_id)}"><div class="field-grid"><div class="field"><label>Review area</label><select id="ctrlArea">${generalOptions(c.review_area || generalIssueType(i))}</select></div><div class="field"><label>Trusted source</label><select id="ctrlTrustedSource"><option ${c.trusted_source === 'Daily extracted transactions' ? 'selected' : ''}>Daily extracted transactions</option><option ${c.trusted_source === 'Monthly status sheet' ? 'selected' : ''}>Monthly status sheet</option><option ${c.trusted_source === 'Manual accountant review' ? 'selected' : ''}>Manual accountant review</option><option ${c.trusted_source === 'Owner clarification' ? 'selected' : ''}>Owner clarification</option></select></div><div class="field"><label>Accounting treatment / provisional treatment</label><input id="ctrlTreatment" value="${esc(c.accounting_treatment || '')}" placeholder="Example: formula issue acknowledged; use daily extracted transactions"></div>${categoryInput('ctrlAffectedLine', 'Affected report line / category', c.affected_report_line || '', 'Choose existing or type affected category/report line')}<div class="field" style="grid-column:1/-1">${serbianMappingPanel('ctrl', c)}</div><div class="field"><label>Expected value</label><input id="ctrlExpected" value="${esc(c.expected_value || val?.expected_value || '')}"></div><div class="field"><label>Actual value</label><input id="ctrlActual" value="${esc(c.actual_value || val?.actual_value || '')}"></div><div class="field"><label>Difference amount</label><input id="ctrlDifference" type="number" step="0.01" value="${Number(diff || 0)}"></div><div class="field"><label>Corrected amount RSD</label><input id="ctrlCorrectedAmount" type="number" step="0.01" value="${Number(c.corrected_amount_rsd || 0)}"></div><div class="field" style="grid-column:1/-1"><label>Root cause / issue found</label><textarea id="ctrlRootCause">${esc(c.root_cause || '')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Corrective action / certification explanation</label><textarea id="ctrlCorrectiveAction">${esc(c.corrective_action || '')}</textarea></div></div><label class="checkbox"><input type="checkbox" id="ctrlCreateAdjustment" ${a.transaction_id ? 'checked' : ''}><span>Create a manual adjustment transaction from this control issue.</span></label><div class="source-box"><h3>Optional manual adjustment</h3><div class="field-grid"><div class="field"><label>Adjustment date</label><input id="adjDate" value="${esc(a.date || `${i.period}-28`)}"></div><div class="field"><label>Direction</label><select id="adjDirection"><option value="inflow" ${a.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${a.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Amount RSD</label><input id="adjAmount" type="number" step="0.01" value="${Number(a.amount_rsd_equivalent || 0)}"></div>${categoryInput('adjCategory', 'Mapped category', a.suggested_category || c.affected_report_line || '')}${reportGroupInput('adjGroup', 'Report group', a.report_group || '')}<div class="field" style="grid-column:1/-1">${serbianMappingPanel('adj', a)}</div><div class="field"><label>Description</label><input id="adjDesc" value="${esc(a.description || i.description || '')}"></div></div></div>${val ? `<div class="source-box"><strong>Original validation:</strong><br>${esc(val.check_name)}<br>Expected: ${esc(val.expected_value)}<br>Actual: ${esc(val.actual_value)}<br>Difference: ${esc(val.difference)}<br>${esc(val.explanation || '')}</div>` : ''}</div>`;
+  return `<div><h3>Editable validation / control issue</h3>${lists}<input type="hidden" id="ctrlIssueId" value="${esc(i.review_item_id)}"><div class="field-grid"><div class="field"><label>Review area</label><select id="ctrlArea">${generalOptions(c.review_area || generalIssueType(i))}</select></div><div class="field"><label>Trusted source</label><select id="ctrlTrustedSource"><option ${c.trusted_source === 'Daily extracted transactions' ? 'selected' : ''}>Daily extracted transactions</option><option ${c.trusted_source === 'Monthly status sheet' ? 'selected' : ''}>Monthly status sheet</option><option ${c.trusted_source === 'Manual accountant review' ? 'selected' : ''}>Manual accountant review</option><option ${c.trusted_source === 'Owner clarification' ? 'selected' : ''}>Owner clarification</option></select></div><div class="field"><label>Accounting treatment / provisional treatment</label><input id="ctrlTreatment" value="${esc(c.accounting_treatment || '')}" placeholder="Example: formula issue acknowledged; use daily extracted transactions"></div>${categoryInput('ctrlAffectedLine', 'Affected report line / category', c.affected_report_line || '', 'Choose existing or type affected category/report line')}<div class="field"><label>Expected value</label><input id="ctrlExpected" value="${esc(c.expected_value || val?.expected_value || '')}"></div><div class="field"><label>Actual value</label><input id="ctrlActual" value="${esc(c.actual_value || val?.actual_value || '')}"></div><div class="field"><label>Difference amount</label><input id="ctrlDifference" type="number" step="0.01" value="${Number(diff || 0)}"></div><div class="field"><label>Corrected amount RSD</label><input id="ctrlCorrectedAmount" type="number" step="0.01" value="${Number(c.corrected_amount_rsd || 0)}"></div><div class="field" style="grid-column:1/-1"><label>Root cause / issue found</label><textarea id="ctrlRootCause">${esc(c.root_cause || '')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Corrective action / certification explanation</label><textarea id="ctrlCorrectiveAction">${esc(c.corrective_action || '')}</textarea></div></div>${serbianMappingForm('ctrl', c, i)}<label class="checkbox"><input type="checkbox" id="ctrlCreateAdjustment" ${a.transaction_id ? 'checked' : ''}><span>Create a manual adjustment transaction from this control issue.</span></label><div class="source-box"><h3>Optional manual adjustment</h3><div class="field-grid"><div class="field"><label>Adjustment date</label><input id="adjDate" value="${esc(a.date || `${i.period}-28`)}"></div><div class="field"><label>Direction</label><select id="adjDirection"><option value="inflow" ${a.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${a.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Amount RSD</label><input id="adjAmount" type="number" step="0.01" value="${Number(a.amount_rsd_equivalent || 0)}"></div>${categoryInput('adjCategory', 'Mapped category', a.suggested_category || c.affected_report_line || '')}${reportGroupInput('adjGroup', 'Report group', a.report_group || '')}<div class="field"><label>Description</label><input id="adjDesc" value="${esc(a.description || i.description || '')}"></div></div>${serbianMappingForm('adj', a, i)}</div>${val ? `<div class="source-box"><strong>Original validation:</strong><br>${esc(val.check_name)}<br>Expected: ${esc(val.expected_value)}<br>Actual: ${esc(val.actual_value)}<br>Difference: ${esc(val.difference)}<br>${esc(val.explanation || '')}</div>` : ''}</div>`;
 }
 function accountantButtons() {
   return [
@@ -1368,11 +1298,11 @@ function ownerButtons() {
 function closeModal() { document.getElementById('reviewModal').classList.remove('open'); currentId = null; }
 function readControlForm() {
   const id = document.getElementById('ctrlIssueId')?.value; if (!id) return null;
-  return { kind: 'control', review_item_id: id, review_area: document.getElementById('ctrlArea').value, accounting_treatment: document.getElementById('ctrlTreatment').value, affected_report_line: document.getElementById('ctrlAffectedLine').value, trusted_source: document.getElementById('ctrlTrustedSource').value, ...readSerbianFields('ctrl'), expected_value: document.getElementById('ctrlExpected').value, actual_value: document.getElementById('ctrlActual').value, difference_amount: Number(document.getElementById('ctrlDifference').value || 0), corrected_amount_rsd: Number(document.getElementById('ctrlCorrectedAmount').value || 0), root_cause: document.getElementById('ctrlRootCause').value, corrective_action: document.getElementById('ctrlCorrectiveAction').value, create_adjustment: document.getElementById('ctrlCreateAdjustment').checked, adjustment: { date: document.getElementById('adjDate').value, direction: document.getElementById('adjDirection').value, amount_rsd_equivalent: Number(document.getElementById('adjAmount').value || 0), suggested_category: document.getElementById('adjCategory').value, report_group: document.getElementById('adjGroup').value, description: document.getElementById('adjDesc').value, ...readSerbianFields('adj') } };
+  return { kind: 'control', review_item_id: id, review_area: document.getElementById('ctrlArea').value, accounting_treatment: document.getElementById('ctrlTreatment').value, affected_report_line: document.getElementById('ctrlAffectedLine').value, trusted_source: document.getElementById('ctrlTrustedSource').value, expected_value: document.getElementById('ctrlExpected').value, actual_value: document.getElementById('ctrlActual').value, difference_amount: Number(document.getElementById('ctrlDifference').value || 0), corrected_amount_rsd: Number(document.getElementById('ctrlCorrectedAmount').value || 0), root_cause: document.getElementById('ctrlRootCause').value, corrective_action: document.getElementById('ctrlCorrectiveAction').value, serbian_account_code: readVal('ctrlAccount'), serbian_account_label: accountLabel(readVal('ctrlAccount')), posting_treatment: readVal('ctrlPosting'), tax_treatment: readVal('ctrlTax'), serbian_certification_note: readVal('ctrlSerbianNote'), create_adjustment: document.getElementById('ctrlCreateAdjustment').checked, adjustment: { date: document.getElementById('adjDate').value, direction: document.getElementById('adjDirection').value, amount_rsd_equivalent: Number(document.getElementById('adjAmount').value || 0), suggested_category: document.getElementById('adjCategory').value, report_group: document.getElementById('adjGroup').value, serbian_account_code: readVal('adjAccount'), serbian_account_label: accountLabel(readVal('adjAccount')), posting_treatment: readVal('adjPosting'), tax_treatment: readVal('adjTax'), serbian_certification_note: readVal('adjSerbianNote'), description: document.getElementById('adjDesc').value } };
 }
 function readForm() {
   const id = document.getElementById('txId')?.value;
-  if (id) return { kind: 'transaction', transaction_id: id, date: document.getElementById('txDate').value, direction: document.getElementById('txDirection').value, payment_method: document.getElementById('txPayment').value, currency_original: document.getElementById('txCurrency').value, amount_rsd_equivalent: Number(document.getElementById('txAmount').value || 0), raw_category: document.getElementById('txRaw').value, suggested_category: document.getElementById('txCat').value, report_group: document.getElementById('txGroup').value, counterparty_type: document.getElementById('txCpType').value, counterparty: document.getElementById('txCp').value, description: document.getElementById('txDesc').value, ...readSerbianFields('tx') };
+  if (id) return { kind: 'transaction', transaction_id: id, date: document.getElementById('txDate').value, direction: document.getElementById('txDirection').value, payment_method: document.getElementById('txPayment').value, currency_original: document.getElementById('txCurrency').value, amount_rsd_equivalent: Number(document.getElementById('txAmount').value || 0), raw_category: document.getElementById('txRaw').value, suggested_category: document.getElementById('txCat').value, report_group: document.getElementById('txGroup').value, counterparty_type: document.getElementById('txCpType').value, counterparty: document.getElementById('txCp').value, description: document.getElementById('txDesc').value, serbian_account_code: readVal('txAccount'), serbian_account_label: accountLabel(readVal('txAccount')), posting_treatment: readVal('txPosting'), tax_treatment: readVal('txTax'), serbian_certification_note: readVal('txSerbianNote') };
   return readControlForm();
 }
 function resolutionType(status, form) {
@@ -1387,9 +1317,7 @@ function resolutionType(status, form) {
 }
 function saveDecision(status, next = false) {
   captureReviewUI();
-  if (status === 'accountant_certified' && !canAccountantCertifySerbian()) {
-    return alert('Company Setup is incomplete. Complete the Serbian accounting profile before accountant-certifying items. You can still mark items management-ready or needs accountant review.');
-  }
+  if (status === 'accountant_certified' && !serbianProfileReady()) { alert('Complete Company Setup before accountant-certifying data to Serbian accounting standards. You can still mark the item Management-ready or Needs accountant review.'); setActiveSection('setup'); return; }
   const i = itemById(currentId), tx = txById(i.related_object_id), before = tx ? effTx(tx) : { review_item: i, validation: valById(i.related_object_id), existing_control: STATE.controlOverrides[i.review_item_id] || null };
   const form = readForm(), reviewer = document.getElementById('reviewerName')?.value || (role() === 'owner' ? 'Business Owner' : 'Accountant Reviewer'), note = document.getElementById('reviewNote')?.value || '', ownerQuestion = document.getElementById('ownerQuestion')?.value || '';
   if (form?.kind === 'transaction' && tx) {
@@ -1402,7 +1330,7 @@ function saveDecision(status, next = false) {
       addLocalSuggestion(form.report_group, 'report_group', { source: 'manual transaction review', review_item_id: i.review_item_id, reviewer });
     }
     if (document.getElementById('createMappingRule')?.checked && status !== 'rejected') {
-      STATE.mappingRules.push({ mapping_rule_id: `LOCAL-MAP-${Date.now()}`, period: 'ALL', direction: form.direction, raw_category: form.raw_category, suggested_category: form.suggested_category, report_group: form.report_group, created_from_review_item_id: i.review_item_id, reviewer, created_at: now() });
+      STATE.mappingRules.push({ mapping_rule_id: `LOCAL-MAP-${Date.now()}`, period: 'ALL', direction: form.direction, raw_category: form.raw_category, suggested_category: form.suggested_category, report_group: form.report_group, serbian_account_code: form.serbian_account_code, serbian_account_label: form.serbian_account_label, posting_treatment: form.posting_treatment, tax_treatment: form.tax_treatment, created_from_review_item_id: i.review_item_id, reviewer, created_at: now() });
     }
   } else if (form?.kind === 'control') {
     const control = { ...form }; delete control.kind; delete control.adjustment;
@@ -1468,8 +1396,8 @@ function markMonthManagementReady() {
   saveState(); renderAll(); alert(`${month().label} marked management-ready.`);
 }
 function certifyMonthAccountant() {
+  if (!serbianProfileReady()) { alert('Complete Company Setup before certifying a period to Serbian accounting standards.'); setActiveSection('setup'); return; }
   if (selected === 'ALL') return alert('Choose one month first.');
-  if (!canAccountantCertifySerbian()) return alert('Company Setup is incomplete. Complete the Serbian accounting profile before accountant-certifying a period.');
   const s = stats(selected);
   if (s.formal_blocking > 0) return alert(`${s.formal_blocking} item(s) still need accountant certification or rejection before formal certification.`);
   STATE.batchStatuses[selected] = { ...(STATE.batchStatuses[selected] || {}), management_ready: true, management_ready_by: STATE.batchStatuses[selected]?.management_ready_by || 'Accountant Reviewer', management_ready_at: STATE.batchStatuses[selected]?.management_ready_at || now(), accountant_certified: true, accountant_certified_by: 'Accountant Reviewer', accountant_certified_at: now(), local_quality_score: localQuality(selected) };
@@ -1477,14 +1405,17 @@ function certifyMonthAccountant() {
   saveState(); renderAll(); alert(`${month().label} accountant-certified locally.`);
 }
 
+function setCoaFilter(k, v) { COA_UI[k] = v; renderSerbianCOA(); }
+function serbianDictionaryObj() { return { exported_at: now(), pack_type: 'Serbian Chart of Accounts Mapping Dictionary', version: APP_VERSION, company_profile: STATE.companyProfile, source_note: 'Demo starter dictionary for Serbian mapping. Accountant must confirm final company account plan and legal/accounting framework.', accounts: SERBIAN_ACCOUNTS, raw_to_konto_rules: RAW_TO_KONTO_RULES.map(r => ({ pattern: String(r.pattern), direction: r.direction, code: r.code, account: accountLabel(r.code), reason: r.reason })), posting_treatments: POSTING_TREATMENTS, tax_treatments: TAX_TREATMENTS, local_mapping_rules: STATE.mappingRules || [] }; }
+function exportSerbianDictionary() { download(`serbian_coa_mapping_dictionary_${new Date().toISOString().slice(0,10)}.json`, serbianDictionaryObj()); }
 function exportObj() {
-  return { exported_at: now(), app: 'Ask Your Business Company Setup + Serbian Accounting Profile Demo', version: APP_VERSION, company_profile: companyProfile(), company_setup_status: setupStatus(), certification_gate: companySetupGate(), warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), certified_summary: certifiedSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), management_ready_transactions: certifiedSummary(m.period).managementRows, accountant_certified_transactions: certifiedSummary(m.period).accountingRows, rejected_rows: certifiedSummary(m.period).rejectedRows, pending_rows: certifiedSummary(m.period).pendingRows, unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+  return { exported_at: now(), app: 'Ask Your Business Serbian COA Mapping Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), certified_summary: certifiedSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), management_ready_transactions: certifiedSummary(m.period).managementRows, accountant_certified_transactions: certifiedSummary(m.period).accountingRows, rejected_rows: certifiedSummary(m.period).rejectedRows, pending_rows: certifiedSummary(m.period).pendingRows, unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
 }
 function managementAnalysisPackObj() {
-  return { exported_at: now(), pack_type: 'Management Analysis Pack', app: 'Ask Your Business Company Setup + Serbian Accounting Profile Demo', version: APP_VERSION, company_profile: companyProfile(), company_code: DATA.company_code, selected_scope: selected, purpose: 'Owner/management-ready dataset with limitations. Not a formal accountant-certified report unless the period status says accountant-certified.', scope_status: { management: managementStatus(), formal: formalStatus(), limitations: certificationLimitations().limits }, months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), limitations: certificationLimitations(m.period).limits, summary: certifiedSummary(m.period).management, category_breakdown: categoryBreakdownRows(certifiedSummary(m.period).managementRows, 999), transactions: certifiedSummary(m.period).managementRows, manual_adjustments: certifiedSummary(m.period).adjustments, rejected_rows: certifiedSummary(m.period).rejectedRows })) };
+  return { exported_at: now(), pack_type: 'Management Analysis Pack', app: 'Ask Your Business Serbian COA Mapping Demo', version: APP_VERSION, company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, purpose: 'Owner/management-ready dataset with limitations. Not a formal accountant-certified report unless the period status says accountant-certified.', scope_status: { management: managementStatus(), formal: formalStatus(), limitations: certificationLimitations().limits }, months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), limitations: certificationLimitations(m.period).limits, summary: certifiedSummary(m.period).management, category_breakdown: categoryBreakdownRows(certifiedSummary(m.period).managementRows, 999), transactions: certifiedSummary(m.period).managementRows, manual_adjustments: certifiedSummary(m.period).adjustments, rejected_rows: certifiedSummary(m.period).rejectedRows })) };
 }
 function accountantPackObj() {
-  return { exported_at: now(), pack_type: 'Accountant Operations Review Pack', version: APP_VERSION, company_profile: companyProfile(), company_setup_status: setupStatus(), company_code: DATA.company_code, selected_scope: selected, purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+  return { exported_at: now(), pack_type: 'Accountant Operations Review Pack', version: APP_VERSION, company_code: DATA.company_code, serbian_dictionary: serbianDictionaryObj(), company_profile: STATE.companyProfile, setup_status: setupStatus(), selected_scope: selected, purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
 }
 function download(name, obj) { const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
 function exportPackage() { download(`certified_import_package_${new Date().toISOString().slice(0, 10)}.json`, exportObj()); }
@@ -1505,21 +1436,59 @@ window.exportPackage = exportPackage;
 window.exportAccountantPack = exportAccountantPack;
 window.exportManagementAnalysisPack = exportManagementAnalysisPack;
 window.exportState = exportState;
+window.setCoaFilter = setCoaFilter;
+window.exportSerbianDictionary = exportSerbianDictionary;
 window.resetProgress = resetProgress;
+window.saveCompanySetup = saveCompanySetup;
+window.applyUniversitySetupPreset = applyUniversitySetupPreset;
+window.resetCompanySetup = resetCompanySetup;
 window.markMonthManagementReady = markMonthManagementReady;
 window.certifyMonthAccountant = certifyMonthAccountant;
 window.ask = ask;
 window.renderReviewTable = renderReviewTable;
 window.renderTxTable = renderTxTable;
 
+
+function escapeRegExpForRule(x) { return String(x || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function loadSerbianDictionary(sd = {}) {
+  SERBIAN_ACCOUNTS.length = 0;
+  POSTING_TREATMENTS.length = 0;
+  TAX_TREATMENTS.length = 0;
+  RAW_TO_KONTO_RULES.length = 0;
+  (sd.accounts || []).forEach(a => SERBIAN_ACCOUNTS.push({
+    code: a.code,
+    name: a.name_sr || a.name || '',
+    klass: a.class || a.klass || String(a.code || '').slice(0,1),
+    group: a.group || String(a.code || '').slice(0,2),
+    type: a.type || 'review',
+    owner_label: a.usage || a.owner_label || '',
+    default_use: a.usage || a.default_use || '',
+    risk: a.risk === 'normal' ? 'normal' : (a.review_level === 'common' ? 'normal' : 'review')
+  }));
+  if (!SERBIAN_ACCOUNTS.find(a => a.code === 'REVIEW')) SERBIAN_ACCOUNTS.push({ code:'REVIEW', name:'Accountant review required - no automatic konto', klass:'X', group:'Review', type:'review', owner_label:'Needs accountant review', default_use:'Use when konto cannot be assigned automatically.', risk:'always_review' });
+  (sd.posting_templates || []).forEach(p => POSTING_TREATMENTS.push([p.id, p.label]));
+  if (!POSTING_TREATMENTS.length) POSTING_TREATMENTS.push(['requires_accountant','Requires accountant posting decision']);
+  (sd.tax_treatments || []).forEach(t => TAX_TREATMENTS.push([t.id, t.label]));
+  if (!TAX_TREATMENTS.length) TAX_TREATMENTS.push(['accountant_review','Accountant tax review required']);
+  (sd.category_mappings || []).forEach(m => RAW_TO_KONTO_RULES.push({
+    pattern: new RegExp((m.raw || [m.raw_category || '']).map(escapeRegExpForRule).join('|'), 'i'),
+    direction: m.direction || '',
+    code: m.suggested_account_code || m.account || 'REVIEW',
+    reason: m.notes || m.note || 'Imported Serbian mapping dictionary suggestion.'
+  }));
+  window.SERBIAN_DICTIONARY_SOURCE = sd;
+}
+
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => setActiveSection(b.dataset.section));
 Promise.all([
   fetch('/data/university_mar_apr_may_import_data.json').then(r => r.json()),
-  fetch('/data/source_evidence_lookup.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+  fetch('/data/source_evidence_lookup.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch('/data/serbian_accounting_dictionary_v1_2.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
 ])
-  .then(([d, evidence]) => {
+  .then(([d, evidence, serbianDictionary]) => {
     DATA = d;
     SOURCE_EVIDENCE = evidence || {};
+    loadSerbianDictionary(serbianDictionary || {});
     loadState();
     const sel = document.getElementById('monthSelect');
     sel.innerHTML = '<option value="ALL">All months combined</option>' + d.months.map(m => `<option value="${m.period}">${m.label}</option>`).join('');

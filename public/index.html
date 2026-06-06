@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ask Your Business - Company Setup & Serbian Accounting Profile</title>
+  <title>Ask Your Business - Serbian COA Mapping Dictionary</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 <header>
   <div class="brand">
     <div>
-      <h1>Ask Your Business - Company Setup & Serbian Accounting Profile v1.1</h1>
-      <div class="subtitle">Company setup foundation for Serbian accounting mapping. Identify the company, legal form, Serbian accounting framework, tax/digital obligations, bank/cash setup, and certification gates before formal account mapping.</div>
+      <h1>Ask Your Business - Serbian COA Mapping Dictionary v1.2</h1>
+      <div class="subtitle">Company setup now expands into a Serbian chart-of-accounts dictionary, konto suggestions, posting treatment, and tax/PDV/SEF treatment inside accountant review.</div>
     </div>
     <div class="badge" id="badge">Loading...</div>
   </div>
@@ -31,8 +31,8 @@
     <span class="mini">Use “All months” for the whole queue, or choose one month for batch certification.</span>
   </div>
   <nav class="tabs">
-    <button class="tab active" data-section="owner">Owner Portal</button>
-    <button class="tab" data-section="company_setup">Company Setup</button>
+    <button class="tab active" data-section="setup">Company Setup</button>
+    <button class="tab" data-section="owner">Owner Portal</button>
     <button class="tab" data-section="accountant">Accountant Operations</button>
     <button class="tab" data-section="shared">Shared Workspace</button>
     <button class="tab" data-section="certified">Certified Data</button>
@@ -40,13 +40,14 @@
     <button class="tab" data-section="review">Review Center</button>
     <button class="tab" data-section="transactions">Transactions</button>
     <button class="tab" data-section="mapping">Mapping</button>
+    <button class="tab" data-section="coa">Serbian COA</button>
     <button class="tab" data-section="validation">Validation</button>
     <button class="tab" data-section="certification">Certification</button>
     <button class="tab" data-section="assistant">Assistant</button>
     <button class="tab" data-section="reports">Reports</button>
   </nav>
-  <section id="owner" class="section active"></section>
-  <section id="company_setup" class="section"></section>
+  <section id="setup" class="section active"></section>
+  <section id="owner" class="section"></section>
   <section id="accountant" class="section"></section>
   <section id="shared" class="section"></section>
   <section id="certified" class="section"></section>
@@ -54,6 +55,7 @@
   <section id="review" class="section"></section>
   <section id="transactions" class="section"></section>
   <section id="mapping" class="section"></section>
+  <section id="coa" class="section"></section>
   <section id="validation" class="section"></section>
   <section id="certification" class="section"></section>
   <section id="assistant" class="section"></section>
@@ -68,6 +70,7 @@
     <div class="modal-body" id="modalBody"></div>
   </div>
 </div>
+<script src="/serbian_config.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

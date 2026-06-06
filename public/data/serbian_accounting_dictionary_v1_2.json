@@ -1,0 +1,2064 @@
+{
+  "version": "1.2.0",
+  "country": "RS",
+  "framework": "Serbia - Privredna društva, zadruge i preduzetnici starter dictionary",
+  "source_note": "Demo starter dictionary. Accountant must confirm current legal/tax applicability before production use.",
+  "accounts": [
+    {
+      "code": "204",
+      "name_sr": "Kupci u zemlji",
+      "class": "2",
+      "group": "20",
+      "type": "asset",
+      "usage": "Domestic customer receivables.",
+      "risk": "normal"
+    },
+    {
+      "code": "205",
+      "name_sr": "Kupci u inostranstvu",
+      "class": "2",
+      "group": "20",
+      "type": "asset",
+      "usage": "Foreign customer receivables.",
+      "risk": "normal"
+    },
+    {
+      "code": "220",
+      "name_sr": "Potraživanja za kamatu i dividende",
+      "class": "2",
+      "group": "22",
+      "type": "asset",
+      "usage": "Interest/dividend receivables.",
+      "risk": "normal"
+    },
+    {
+      "code": "221",
+      "name_sr": "Potraživanja od zaposlenih",
+      "class": "2",
+      "group": "22",
+      "type": "asset",
+      "usage": "Employee receivables/advances.",
+      "risk": "normal"
+    },
+    {
+      "code": "241",
+      "name_sr": "Tekući računi",
+      "class": "2",
+      "group": "24",
+      "type": "asset/cash",
+      "usage": "RSD bank/current accounts.",
+      "risk": "normal"
+    },
+    {
+      "code": "243",
+      "name_sr": "Blagajna",
+      "class": "2",
+      "group": "24",
+      "type": "asset/cash",
+      "usage": "RSD cash register / blagajna.",
+      "risk": "normal"
+    },
+    {
+      "code": "244",
+      "name_sr": "Devizni račun",
+      "class": "2",
+      "group": "24",
+      "type": "asset/cash",
+      "usage": "Foreign currency bank account.",
+      "risk": "normal"
+    },
+    {
+      "code": "246",
+      "name_sr": "Devizna blagajna",
+      "class": "2",
+      "group": "24",
+      "type": "asset/cash",
+      "usage": "Foreign currency cash.",
+      "risk": "normal"
+    },
+    {
+      "code": "270",
+      "name_sr": "PDV u primljenim fakturama po opštoj stopi",
+      "class": "2",
+      "group": "27",
+      "type": "asset/tax",
+      "usage": "Input VAT general rate.",
+      "risk": "review"
+    },
+    {
+      "code": "271",
+      "name_sr": "PDV u primljenim fakturama po posebnoj stopi",
+      "class": "2",
+      "group": "27",
+      "type": "asset/tax",
+      "usage": "Input VAT reduced/special rate.",
+      "risk": "review"
+    },
+    {
+      "code": "272",
+      "name_sr": "PDV u datim avansima",
+      "class": "2",
+      "group": "27",
+      "type": "asset/tax",
+      "usage": "Input VAT on advances.",
+      "risk": "review"
+    },
+    {
+      "code": "279",
+      "name_sr": "Potraživanja za više plaćeni PDV",
+      "class": "2",
+      "group": "27",
+      "type": "asset/tax",
+      "usage": "VAT receivable / overpaid VAT.",
+      "risk": "review"
+    },
+    {
+      "code": "405",
+      "name_sr": "Rezervisanja za troškove sudskih sporova",
+      "class": "4",
+      "group": "40",
+      "type": "liability",
+      "usage": "Provisions for court disputes/legal cases.",
+      "risk": "review"
+    },
+    {
+      "code": "414",
+      "name_sr": "Dugoročni krediti i zajmovi u zemlji",
+      "class": "4",
+      "group": "41",
+      "type": "liability",
+      "usage": "Long-term domestic loans.",
+      "risk": "review"
+    },
+    {
+      "code": "415",
+      "name_sr": "Dugoročni krediti i zajmovi u inostranstvu",
+      "class": "4",
+      "group": "41",
+      "type": "liability",
+      "usage": "Long-term foreign loans.",
+      "risk": "review"
+    },
+    {
+      "code": "422",
+      "name_sr": "Kratkoročni krediti i zajmovi u zemlji",
+      "class": "4",
+      "group": "42",
+      "type": "liability",
+      "usage": "Short-term domestic loans.",
+      "risk": "review"
+    },
+    {
+      "code": "423",
+      "name_sr": "Kratkoročni krediti i zajmovi u inostranstvu",
+      "class": "4",
+      "group": "42",
+      "type": "liability",
+      "usage": "Short-term foreign loans.",
+      "risk": "review"
+    },
+    {
+      "code": "435",
+      "name_sr": "Dobavljači u zemlji",
+      "class": "4",
+      "group": "43",
+      "type": "liability",
+      "usage": "Domestic supplier payables.",
+      "risk": "review"
+    },
+    {
+      "code": "436",
+      "name_sr": "Dobavljači u inostranstvu",
+      "class": "4",
+      "group": "43",
+      "type": "liability",
+      "usage": "Foreign supplier payables.",
+      "risk": "review"
+    },
+    {
+      "code": "450",
+      "name_sr": "Obaveze za neto zarade i naknade zarada",
+      "class": "4",
+      "group": "45",
+      "type": "liability/payroll",
+      "usage": "Net salary liabilities.",
+      "risk": "review"
+    },
+    {
+      "code": "451",
+      "name_sr": "Obaveze za porez na zarade na teret zaposlenog",
+      "class": "4",
+      "group": "45",
+      "type": "liability/payroll",
+      "usage": "Employee wage tax liabilities.",
+      "risk": "review"
+    },
+    {
+      "code": "452",
+      "name_sr": "Obaveze za doprinose na zarade na teret zaposlenog",
+      "class": "4",
+      "group": "45",
+      "type": "liability/payroll",
+      "usage": "Employee contribution liabilities.",
+      "risk": "review"
+    },
+    {
+      "code": "453",
+      "name_sr": "Obaveze za doprinose na zarade na teret poslodavca",
+      "class": "4",
+      "group": "45",
+      "type": "liability/payroll",
+      "usage": "Employer contribution liabilities.",
+      "risk": "review"
+    },
+    {
+      "code": "470",
+      "name_sr": "Obaveze za PDV po izdatim fakturama po opštoj stopi",
+      "class": "4",
+      "group": "47",
+      "type": "liability/tax",
+      "usage": "Output VAT general rate.",
+      "risk": "review"
+    },
+    {
+      "code": "471",
+      "name_sr": "Obaveze za PDV po izdatim fakturama po posebnoj stopi",
+      "class": "4",
+      "group": "47",
+      "type": "liability/tax",
+      "usage": "Output VAT reduced/special rate.",
+      "risk": "review"
+    },
+    {
+      "code": "472",
+      "name_sr": "Obaveze za PDV po primljenim avansima",
+      "class": "4",
+      "group": "47",
+      "type": "liability/tax",
+      "usage": "VAT on received advances.",
+      "risk": "review"
+    },
+    {
+      "code": "479",
+      "name_sr": "Ostale obaveze za PDV",
+      "class": "4",
+      "group": "47",
+      "type": "liability/tax",
+      "usage": "Other VAT liabilities.",
+      "risk": "review"
+    },
+    {
+      "code": "481",
+      "name_sr": "Obaveze za porez iz rezultata",
+      "class": "4",
+      "group": "48",
+      "type": "liability/tax",
+      "usage": "Corporate income tax liability.",
+      "risk": "review"
+    },
+    {
+      "code": "482",
+      "name_sr": "Obaveze za poreze, carine i druge dažbine iz nabavke ili na teret troškova",
+      "class": "4",
+      "group": "48",
+      "type": "liability/tax",
+      "usage": "Taxes/customs/duties as cost or acquisition.",
+      "risk": "review"
+    },
+    {
+      "code": "489",
+      "name_sr": "Ostale obaveze za poreze, doprinose i druge dažbine",
+      "class": "4",
+      "group": "48",
+      "type": "liability/tax",
+      "usage": "Other taxes/contributions.",
+      "risk": "review"
+    },
+    {
+      "code": "50",
+      "name_sr": "Nabavna vrednost prodate robe",
+      "class": "5",
+      "group": "50",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "500",
+      "name_sr": "Nabavka robe",
+      "class": "5",
+      "group": "50",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "501",
+      "name_sr": "Nabavna vrednost prodate robe",
+      "class": "5",
+      "group": "50",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "502",
+      "name_sr": "Nabavna vrednost nekretnina pribavljenih radi prodaje",
+      "class": "5",
+      "group": "50",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "503",
+      "name_sr": "Nabavna vrednost ostalih stalnih sredstava namenjenih prodaji",
+      "class": "5",
+      "group": "50",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "51",
+      "name_sr": "Troškovi materijala i energije",
+      "class": "5",
+      "group": "51",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "510",
+      "name_sr": "Nabavka materijala",
+      "class": "5",
+      "group": "51",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "511",
+      "name_sr": "Troškovi materijala za izradu",
+      "class": "5",
+      "group": "51",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "512",
+      "name_sr": "Troškovi ostalog materijala / režijskog",
+      "class": "5",
+      "group": "51",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "513",
+      "name_sr": "Troškovi goriva i energije",
+      "class": "5",
+      "group": "51",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "514",
+      "name_sr": "Troškovi rezervnih delova",
+      "class": "5",
+      "group": "51",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "515",
+      "name_sr": "Troškovi jednokratnog otpisa alata i inventara",
+      "class": "5",
+      "group": "51",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "52",
+      "name_sr": "Troškovi zarada, naknada zarada i ostali lični rashodi",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "520",
+      "name_sr": "Troškovi zarada i naknada zarada - bruto",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "521",
+      "name_sr": "Troškovi poreza i doprinosa na zarade na teret poslodavca",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "522",
+      "name_sr": "Troškovi naknada po ugovoru o delu",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "523",
+      "name_sr": "Troškovi naknada po autorskim ugovorima",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "524",
+      "name_sr": "Troškovi naknada po ugovoru o privremenim i povremenim poslovima",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "525",
+      "name_sr": "Troškovi naknada fizičkim licima po osnovu ostalih ugovora",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "526",
+      "name_sr": "Troškovi naknada direktoru / organima upravljanja i nadzora",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "528",
+      "name_sr": "Troškovi angažovanja zaposlenih preko agencija i zadruga",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "529",
+      "name_sr": "Ostali lični rashodi i naknade",
+      "class": "5",
+      "group": "52",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "53",
+      "name_sr": "Troškovi proizvodnih usluga",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "530",
+      "name_sr": "Troškovi usluga na izradi učinaka",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "531",
+      "name_sr": "Troškovi transportnih usluga",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "532",
+      "name_sr": "Troškovi usluga održavanja",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "533",
+      "name_sr": "Troškovi zakupa",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "534",
+      "name_sr": "Troškovi sajmova",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "535",
+      "name_sr": "Troškovi reklame i propagande",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "536",
+      "name_sr": "Troškovi istraživanja",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "537",
+      "name_sr": "Troškovi razvoja koji se ne kapitalizuju",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "539",
+      "name_sr": "Troškovi ostalih proizvodnih usluga",
+      "class": "5",
+      "group": "53",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "54",
+      "name_sr": "Troškovi amortizacije i rezervisanja",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "540",
+      "name_sr": "Troškovi amortizacije",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "541",
+      "name_sr": "Troškovi rezervisanja za garantni rok",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "542",
+      "name_sr": "Rezervisanja za troškove obnavljanja prirodnih bogatstava",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "543",
+      "name_sr": "Troškovi rezervisanja za zadržane kaucije i depozite",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "544",
+      "name_sr": "Rezervisanja za troškove restrukturiranja",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "545",
+      "name_sr": "Troškovi rezervisanja za naknade i druge beneficije zaposlenih",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "549",
+      "name_sr": "Troškovi ostalih rezervisanja",
+      "class": "5",
+      "group": "54",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "55",
+      "name_sr": "Nematerijalni troškovi",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "550",
+      "name_sr": "Troškovi neproizvodnih usluga",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "551",
+      "name_sr": "Troškovi reprezentacije",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "552",
+      "name_sr": "Troškovi premija osiguranja",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "553",
+      "name_sr": "Troškovi platnog prometa",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "554",
+      "name_sr": "Troškovi članarina",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "555",
+      "name_sr": "Troškovi poreza i naknada",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "556",
+      "name_sr": "Troškovi doprinosa",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "559",
+      "name_sr": "Ostali nematerijalni troškovi",
+      "class": "5",
+      "group": "55",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "56",
+      "name_sr": "Finansijski rashodi",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "560",
+      "name_sr": "Finansijski rashodi iz odnosa sa matičnim i zavisnim pravnim licima",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "561",
+      "name_sr": "Finansijski rashodi iz odnosa sa ostalim povezanim licima",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "562",
+      "name_sr": "Rashodi kamata prema trećim licima",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "563",
+      "name_sr": "Negativne kursne razlike prema trećim licima",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "564",
+      "name_sr": "Rashodi po osnovu efekata valutne klauzule",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "565",
+      "name_sr": "Rashodi od učešća u gubitku pridruženih pravnih lica i zajedničkih poduhvata",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "569",
+      "name_sr": "Ostali finansijski rashodi",
+      "class": "5",
+      "group": "56",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "57",
+      "name_sr": "Ostali rashodi",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "570",
+      "name_sr": "Gubici po osnovu rashodovanja i prodaje nematerijalne imovine, nekretnina, postrojenja i opreme",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "571",
+      "name_sr": "Gubici po osnovu rashodovanja i prodaje bioloških sredstava",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "572",
+      "name_sr": "Gubici po osnovu rashodovanja i prodaje učešća u kapitalu i hartija od vrednosti",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "573",
+      "name_sr": "Gubici od prodaje materijala",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "574",
+      "name_sr": "Manjkovi",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "575",
+      "name_sr": "Rashodi po osnovu efekata ugovorene zaštite od rizika",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "576",
+      "name_sr": "Rashodi po osnovu direktnih otpisa potraživanja",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "577",
+      "name_sr": "Rashodi po osnovu rashodovanja zaliha",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "579",
+      "name_sr": "Ostali nepomenuti rashodi",
+      "class": "5",
+      "group": "57",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "58",
+      "name_sr": "Rashodi od usklađivanja vrednosti imovine",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "580",
+      "name_sr": "Rashodi od usklađivanja vrednosti bioloških sredstava",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "581",
+      "name_sr": "Rashodi od usklađivanja vrednosti nematerijalne imovine",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "582",
+      "name_sr": "Rashodi od usklađivanja vrednosti nekretnina, postrojenja i opreme",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "583",
+      "name_sr": "Rashodi od usklađivanja vrednosti dugoročnih finansijskih plasmana",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "584",
+      "name_sr": "Rashodi od usklađivanja vrednosti zaliha",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "585",
+      "name_sr": "Rashodi od usklađivanja vrednosti potraživanja i kratkoročnih finansijskih plasmana",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "586",
+      "name_sr": "Rashodi od usklađivanja vrednosti finansijskih derivata i finansijskih sredstava",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "589",
+      "name_sr": "Rashodi od usklađivanja vrednosti ostale imovine",
+      "class": "5",
+      "group": "58",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "59",
+      "name_sr": "Gubitak poslovanja koje se obustavlja, promene računovodstvene politike, ispravke grešaka i prenos rashoda",
+      "class": "5",
+      "group": "59",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "590",
+      "name_sr": "Gubitak poslovanja koje se obustavlja",
+      "class": "5",
+      "group": "59",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "591",
+      "name_sr": "Rashodi po osnovu efekata promene računovodstvenih politika",
+      "class": "5",
+      "group": "59",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "592",
+      "name_sr": "Rashodi po osnovu ispravki grešaka iz ranijih godina koje nisu materijalno značajne",
+      "class": "5",
+      "group": "59",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "599",
+      "name_sr": "Prenos rashoda",
+      "class": "5",
+      "group": "59",
+      "type": "expense",
+      "usage": "Class 5 expense account; exact use depends on source evidence, PDV/tax treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "60",
+      "name_sr": "Prihodi od prodaje robe",
+      "class": "6",
+      "group": "60",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "600",
+      "name_sr": "Prihodi od prodaje robe matičnom i zavisnim pravnim licima na domaćem tržištu",
+      "class": "6",
+      "group": "60",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "601",
+      "name_sr": "Prihodi od prodaje robe matičnom i zavisnim pravnim licima na inostranom tržištu",
+      "class": "6",
+      "group": "60",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "602",
+      "name_sr": "Prihodi od prodaje robe ostalim povezanim licima na domaćem tržištu",
+      "class": "6",
+      "group": "60",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "603",
+      "name_sr": "Prihodi od prodaje robe ostalim povezanim licima na inostranom tržištu",
+      "class": "6",
+      "group": "60",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "604",
+      "name_sr": "Prihodi od prodaje robe na domaćem tržištu",
+      "class": "6",
+      "group": "60",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "605",
+      "name_sr": "Prihodi od prodaje robe na inostranom tržištu",
+      "class": "6",
+      "group": "60",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "61",
+      "name_sr": "Prihodi od prodaje proizvoda i usluga",
+      "class": "6",
+      "group": "61",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "610",
+      "name_sr": "Prihodi od prodaje proizvoda i usluga matičnom i zavisnim pravnim licima na domaćem tržištu",
+      "class": "6",
+      "group": "61",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "611",
+      "name_sr": "Prihodi od prodaje proizvoda i usluga matičnom i zavisnim pravnim licima na inostranom tržištu",
+      "class": "6",
+      "group": "61",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "612",
+      "name_sr": "Prihodi od prodaje proizvoda i usluga ostalim povezanim licima na domaćem tržištu",
+      "class": "6",
+      "group": "61",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "613",
+      "name_sr": "Prihodi od prodaje proizvoda i usluga ostalim povezanim licima na inostranom tržištu",
+      "class": "6",
+      "group": "61",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "614",
+      "name_sr": "Prihodi od prodaje proizvoda i usluga na domaćem tržištu",
+      "class": "6",
+      "group": "61",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "615",
+      "name_sr": "Prihodi od prodaje proizvoda i usluga na inostranom tržištu",
+      "class": "6",
+      "group": "61",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "62",
+      "name_sr": "Prihodi od aktiviranja učinaka i robe",
+      "class": "6",
+      "group": "62",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "620",
+      "name_sr": "Prihodi od aktiviranja ili potrošnje robe za sopstvene potrebe",
+      "class": "6",
+      "group": "62",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "621",
+      "name_sr": "Prihodi od aktiviranja ili potrošnje proizvoda i usluga za sopstvene potrebe",
+      "class": "6",
+      "group": "62",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "63",
+      "name_sr": "Promena vrednosti zaliha učinaka",
+      "class": "6",
+      "group": "63",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "630",
+      "name_sr": "Povećanje vrednosti zaliha nedovršene proizvodnje, usluga i gotovih proizvoda",
+      "class": "6",
+      "group": "63",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "631",
+      "name_sr": "Smanjenje vrednosti zaliha nedovršene proizvodnje, usluga i gotovih proizvoda",
+      "class": "6",
+      "group": "63",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "64",
+      "name_sr": "Prihodi od premija, subvencija, dotacija, donacija i sl.",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "640",
+      "name_sr": "Prihodi od premija, subvencija, dotacija, regresa, kompenzacija i povraćaja poreskih dažbina",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "641",
+      "name_sr": "Prihodi po osnovu uslovljenih donacija",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "642",
+      "name_sr": "Prihodi od donacija, dotacija, subvencija i sl. iz republičkog budžeta",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "643",
+      "name_sr": "Prihodi od donacija, dotacija, subvencija i sl. iz budžeta AP ili lokalne samouprave",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "644",
+      "name_sr": "Prihodi od donacija, dotacija i sl. od inostranih vlada i međunarodnih organizacija",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "645",
+      "name_sr": "Prihodi od donacija, dotacija i sl. od domaćih privrednih društava, preduzetnika i drugih pravnih lica",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "646",
+      "name_sr": "Prihodi od donacija, dotacija i sl. od fizičkih lica iz zemlje i inostranstva",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "649",
+      "name_sr": "Ostali prihodi od donacija, dotacija, subvencija i sl.",
+      "class": "6",
+      "group": "64",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "65",
+      "name_sr": "Drugi poslovni prihodi",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "650",
+      "name_sr": "Prihodi od zakupa",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "651",
+      "name_sr": "Prihodi od članarina",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "652",
+      "name_sr": "Prihodi od tantijema i licencnih naknada",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "653",
+      "name_sr": "Prihodi od članskih doprinosa",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "654",
+      "name_sr": "Prihodi po posebnim propisima iz budžeta",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "655",
+      "name_sr": "Prihodi po posebnim propisima iz ostalih izvora",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "659",
+      "name_sr": "Ostali poslovni prihodi",
+      "class": "6",
+      "group": "65",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "66",
+      "name_sr": "Finansijski prihodi",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "660",
+      "name_sr": "Finansijski prihodi od matičnog i zavisnih pravnih lica",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "661",
+      "name_sr": "Finansijski prihodi od ostalih povezanih lica",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "662",
+      "name_sr": "Prihodi od kamata od trećih lica",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "663",
+      "name_sr": "Pozitivne kursne razlike prema trećim licima",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "664",
+      "name_sr": "Prihodi po osnovu efekata valutne klauzule",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "665",
+      "name_sr": "Prihodi od učešća u dobitku pridruženih pravnih lica i zajedničkih poduhvata",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "669",
+      "name_sr": "Ostali finansijski prihodi",
+      "class": "6",
+      "group": "66",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "67",
+      "name_sr": "Ostali prihodi",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "670",
+      "name_sr": "Dobici od prodaje nematerijalne imovine, nekretnina, postrojenja i opreme",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "671",
+      "name_sr": "Dobici od prodaje bioloških sredstava",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "672",
+      "name_sr": "Dobici od prodaje učešća i hartija od vrednosti",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "673",
+      "name_sr": "Dobici od prodaje materijala",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "674",
+      "name_sr": "Viškovi",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "675",
+      "name_sr": "Naplaćena otpisana potraživanja",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "676",
+      "name_sr": "Prihodi po osnovu efekata ugovorene zaštite od rizika",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "677",
+      "name_sr": "Prihodi od smanjenja obaveza",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "678",
+      "name_sr": "Prihodi od ukidanja dugoročnih i kratkoročnih rezervisanja",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "679",
+      "name_sr": "Ostali nepomenuti prihodi",
+      "class": "6",
+      "group": "67",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "68",
+      "name_sr": "Prihodi od usklađivanja vrednosti imovine",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "680",
+      "name_sr": "Prihodi od usklađivanja vrednosti bioloških sredstava",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "681",
+      "name_sr": "Prihodi od usklađivanja vrednosti nematerijalne imovine",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "682",
+      "name_sr": "Prihodi od usklađivanja vrednosti nekretnina, postrojenja i opreme",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "683",
+      "name_sr": "Prihodi od usklađivanja vrednosti dugoročnih finansijskih plasmana i hartija od vrednosti",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "684",
+      "name_sr": "Prihodi od usklađivanja vrednosti zaliha",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "685",
+      "name_sr": "Prihodi od usklađivanja vrednosti potraživanja i kratkoročnih finansijskih plasmana",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "686",
+      "name_sr": "Prihodi od usklađivanja vrednosti finansijskih derivata i finansijskih sredstava",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "689",
+      "name_sr": "Prihodi od usklađivanja vrednosti ostale imovine",
+      "class": "6",
+      "group": "68",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "69",
+      "name_sr": "Dobitak poslovanja koje se obustavlja, promene računovodstvene politike, ispravke grešaka i prenos prihoda",
+      "class": "6",
+      "group": "69",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "group"
+    },
+    {
+      "code": "690",
+      "name_sr": "Dobitak poslovanja koje se obustavlja",
+      "class": "6",
+      "group": "69",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "691",
+      "name_sr": "Prihodi od efekata promene računovodstvenih politika",
+      "class": "6",
+      "group": "69",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "692",
+      "name_sr": "Prihodi po osnovu ispravki grešaka iz ranijih godina koje nisu materijalno značajne",
+      "class": "6",
+      "group": "69",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    },
+    {
+      "code": "699",
+      "name_sr": "Prenos prihoda",
+      "class": "6",
+      "group": "69",
+      "type": "income",
+      "usage": "Class 6 income account; exact use depends on legal form, source evidence, PDV/SEF treatment and accountant certification.",
+      "risk": "normal"
+    }
+  ],
+  "category_mappings": [
+    {
+      "raw_category": "Rate",
+      "direction": "inflow",
+      "management_category": "Tuition instalment revenue",
+      "suggested_account_code": "614",
+      "posting_template_id": "direct_cash_or_bank_revenue",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Education-service income candidate; confirm legal status/PDV."
+    },
+    {
+      "raw_category": "Obnova godine",
+      "direction": "inflow",
+      "management_category": "Academic renewal revenue",
+      "suggested_account_code": "614",
+      "posting_template_id": "direct_cash_or_bank_revenue",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Likely service income; review."
+    },
+    {
+      "raw_category": "Ispiti",
+      "direction": "inflow",
+      "management_category": "Exam fees",
+      "suggested_account_code": "614",
+      "posting_template_id": "direct_cash_or_bank_revenue",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Likely service income; review."
+    },
+    {
+      "raw_category": "Biblioteka",
+      "direction": "inflow",
+      "management_category": "Library/copying revenue",
+      "suggested_account_code": "659",
+      "posting_template_id": "direct_cash_or_bank_revenue",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Other operating income candidate."
+    },
+    {
+      "raw_category": "Bife-Šank",
+      "direction": "inflow",
+      "management_category": "Cafe/bar revenue",
+      "suggested_account_code": "604",
+      "posting_template_id": "direct_cash_or_bank_revenue",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Sale of goods candidate; fiscalization/PDV may apply."
+    },
+    {
+      "raw_category": "Bankomat",
+      "direction": "inflow",
+      "management_category": "ATM/bankomat income",
+      "suggested_account_code": "650",
+      "posting_template_id": "direct_cash_or_bank_revenue",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Rental/commission income candidate."
+    },
+    {
+      "raw_category": "Višak, kusur",
+      "direction": "inflow",
+      "management_category": "Cash surplus / difference",
+      "suggested_account_code": "674",
+      "posting_template_id": "cash_difference_review",
+      "tax_treatment_id": "no_pdv",
+      "notes": "Cash surplus; review if material."
+    },
+    {
+      "raw_category": "Konverzija",
+      "direction": "inflow",
+      "management_category": "Currency conversion / FX movement",
+      "suggested_account_code": "241/243/244/246 transfer + 663 if FX gain",
+      "posting_template_id": "fx_transfer_review",
+      "tax_treatment_id": "no_pdv_transfer",
+      "notes": "Often a transfer, not operating revenue."
+    },
+    {
+      "raw_category": "Zarade zaposlenih",
+      "direction": "outflow",
+      "management_category": "Salaries and wages",
+      "suggested_account_code": "520",
+      "posting_template_id": "payroll_posting",
+      "tax_treatment_id": "payroll_tax_contributions",
+      "notes": "Payroll subledger required."
+    },
+    {
+      "raw_category": "Doprinosi",
+      "direction": "outflow",
+      "management_category": "Payroll contributions",
+      "suggested_account_code": "521",
+      "posting_template_id": "payroll_posting",
+      "tax_treatment_id": "payroll_tax_contributions",
+      "notes": "Employer-side payroll contributions."
+    },
+    {
+      "raw_category": "Fin.usluge",
+      "direction": "outflow",
+      "management_category": "Bank fees / financial services",
+      "suggested_account_code": "553",
+      "posting_template_id": "direct_bank_expense",
+      "tax_treatment_id": "no_pdv_or_bank_fee_review",
+      "notes": "Bank/payment fees."
+    },
+    {
+      "raw_category": "Konverzije",
+      "direction": "outflow",
+      "management_category": "Currency conversion / FX movement",
+      "suggested_account_code": "241/243/244/246 transfer + 563 if FX loss",
+      "posting_template_id": "fx_transfer_review",
+      "tax_treatment_id": "no_pdv_transfer",
+      "notes": "Often transfer; only FX result hits 563/663."
+    },
+    {
+      "raw_category": "Internet, telefon",
+      "direction": "outflow",
+      "management_category": "Internet and phone",
+      "suggested_account_code": "550",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Telecom services."
+    },
+    {
+      "raw_category": "Javno komunalno",
+      "direction": "outflow",
+      "management_category": "Utilities / communal services",
+      "suggested_account_code": "550/513",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Utilities; energy may be 513."
+    },
+    {
+      "raw_category": "Gorivo, struja",
+      "direction": "outflow",
+      "management_category": "Fuel / electricity / utilities",
+      "suggested_account_code": "513",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Fuel/energy."
+    },
+    {
+      "raw_category": "Usluge održavanja",
+      "direction": "outflow",
+      "management_category": "Maintenance services",
+      "suggested_account_code": "532",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Maintenance services."
+    },
+    {
+      "raw_category": "Materijal (kanc.)",
+      "direction": "outflow",
+      "management_category": "Office supplies",
+      "suggested_account_code": "512",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Office material."
+    },
+    {
+      "raw_category": "Nabavka robe -šank",
+      "direction": "outflow",
+      "management_category": "Cafe/bar inventory",
+      "suggested_account_code": "500/501",
+      "posting_template_id": "inventory_purchase_review",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Goods/inventory/COGS policy required."
+    },
+    {
+      "raw_category": "Eksterne usluge",
+      "direction": "outflow",
+      "management_category": "External services",
+      "suggested_account_code": "550/539",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "External services."
+    },
+    {
+      "raw_category": "Advokati",
+      "direction": "outflow",
+      "management_category": "Legal / professional services",
+      "suggested_account_code": "550",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Legal services."
+    },
+    {
+      "raw_category": "Sudski sporovi",
+      "direction": "outflow",
+      "management_category": "Legal dispute / settlement",
+      "suggested_account_code": "405/550/579",
+      "posting_template_id": "legal_dispute_review",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Could be provision, service, settlement, or other expense."
+    },
+    {
+      "raw_category": "Dugovi",
+      "direction": "outflow",
+      "management_category": "Debt/legal/repayment item",
+      "suggested_account_code": "NEEDS_ACCOUNTANT_REVIEW",
+      "posting_template_id": "related_party_or_debt_review",
+      "tax_treatment_id": "needs_accountant_review",
+      "notes": "Never auto-map."
+    },
+    {
+      "raw_category": "Troškovi prevoza,",
+      "direction": "outflow",
+      "management_category": "Transport costs",
+      "suggested_account_code": "531",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Transport."
+    },
+    {
+      "raw_category": "taksi i PTT",
+      "direction": "outflow",
+      "management_category": "Taxi / postage / courier",
+      "suggested_account_code": "531/550",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Taxi/postage/courier."
+    },
+    {
+      "raw_category": "Članarina Univer",
+      "direction": "outflow",
+      "management_category": "University membership fee",
+      "suggested_account_code": "554",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "no_pdv_or_review",
+      "notes": "Membership fee."
+    },
+    {
+      "raw_category": "Isplate vlasnicima",
+      "direction": "outflow",
+      "management_category": "Owner / related-party payment",
+      "suggested_account_code": "NEEDS_ACCOUNTANT_REVIEW",
+      "posting_template_id": "owner_related_party_review",
+      "tax_treatment_id": "needs_accountant_review",
+      "notes": "Never auto-expense."
+    },
+    {
+      "raw_category": "osnivaču",
+      "direction": "outflow",
+      "management_category": "Owner / founder payment",
+      "suggested_account_code": "NEEDS_ACCOUNTANT_REVIEW",
+      "posting_template_id": "owner_related_party_review",
+      "tax_treatment_id": "needs_accountant_review",
+      "notes": "Never auto-expense."
+    },
+    {
+      "raw_category": "(Marketing, Knjig.",
+      "direction": "outflow",
+      "management_category": "Marketing / bookkeeping / professional services",
+      "suggested_account_code": "535/550",
+      "posting_template_id": "supplier_bill_or_direct_payment",
+      "tax_treatment_id": "pdv_input_review",
+      "notes": "Truncated label; confirm."
+    },
+    {
+      "raw_category": "Veštaci...)",
+      "direction": "outflow",
+      "management_category": "Expert witness / professional services",
+      "suggested_account_code": "550/579",
+      "posting_template_id": "legal_dispute_review",
+      "tax_treatment_id": "pdv_needs_review",
+      "notes": "Expert witness/professional/legal cost."
+    },
+    {
+      "raw_category": "Porez,",
+      "direction": "outflow",
+      "management_category": "Taxes / government fees",
+      "suggested_account_code": "555/481/482/489",
+      "posting_template_id": "tax_payment_review",
+      "tax_treatment_id": "tax_payment_review",
+      "notes": "Tax type must be identified."
+    }
+  ],
+  "posting_templates": [
+    {
+      "id": "direct_cash_or_bank_revenue",
+      "label": "Direct cash/bank revenue",
+      "debit_rule": "243 cash or 241 bank",
+      "credit_rule": "6xx income account",
+      "notes": "Use for immediately paid revenue; invoice/SEF workflow may require receivable and VAT accounts."
+    },
+    {
+      "id": "invoice_then_payment",
+      "label": "Invoice / receivable then payment",
+      "debit_rule": "204 customer receivable, then 241/243 on payment",
+      "credit_rule": "6xx income + 47x VAT if applicable",
+      "notes": "Use when income is invoiced before payment."
+    },
+    {
+      "id": "supplier_bill_or_direct_payment",
+      "label": "Supplier bill/direct expense payment",
+      "debit_rule": "5xx expense and 27x input VAT if allowed",
+      "credit_rule": "435 supplier or 241/243 if paid directly",
+      "notes": "Use invoice evidence/SEF matching when available."
+    },
+    {
+      "id": "direct_bank_expense",
+      "label": "Direct bank expense",
+      "debit_rule": "5xx expense",
+      "credit_rule": "241 current account",
+      "notes": "Bank fees/payment charges."
+    },
+    {
+      "id": "payroll_posting",
+      "label": "Payroll posting",
+      "debit_rule": "520/521 payroll expenses",
+      "credit_rule": "450/451/452/453 liabilities or 241 payment",
+      "notes": "Requires payroll calculation/PPP-PD support later."
+    },
+    {
+      "id": "fx_transfer_review",
+      "label": "FX/currency transfer review",
+      "debit_rule": "241/243/244/246 movement; 563/663 only for FX difference",
+      "credit_rule": "241/243/244/246 movement",
+      "notes": "Often not true revenue/expense."
+    },
+    {
+      "id": "inventory_purchase_review",
+      "label": "Inventory / goods purchase review",
+      "debit_rule": "500/stock accounts depending policy",
+      "credit_rule": "435 supplier or 241/243",
+      "notes": "Requires inventory/COGS policy later."
+    },
+    {
+      "id": "owner_related_party_review",
+      "label": "Owner / related-party review",
+      "debit_rule": "depends: loan, distribution, dividend, liability, expense",
+      "credit_rule": "241/243/counterparty account",
+      "notes": "Always accountant review; never auto-expense."
+    },
+    {
+      "id": "legal_dispute_review",
+      "label": "Legal dispute / provision review",
+      "debit_rule": "405/550/579 depending facts",
+      "credit_rule": "435/241/243/liability",
+      "notes": "Could be provision, settlement, legal services, debt, or other expense."
+    },
+    {
+      "id": "tax_payment_review",
+      "label": "Tax/government payment review",
+      "debit_rule": "555/481/482/489/47x depending tax",
+      "credit_rule": "241/243",
+      "notes": "Tax type must be identified before posting."
+    },
+    {
+      "id": "cash_difference_review",
+      "label": "Cash surplus/shortage review",
+      "debit_rule": "243/574/674 depending surplus/shortage",
+      "credit_rule": "243/574/674",
+      "notes": "Cash over/short review."
+    },
+    {
+      "id": "manual_control_adjustment",
+      "label": "Manual control adjustment",
+      "debit_rule": "selected by accountant",
+      "credit_rule": "selected by accountant",
+      "notes": "Use for validation/control resolutions."
+    },
+    {
+      "id": "needs_accountant_review",
+      "label": "Needs accountant review before posting",
+      "debit_rule": "not determined",
+      "credit_rule": "not determined",
+      "notes": "Fallback for uncertain cases."
+    }
+  ],
+  "tax_treatments": [
+    {
+      "id": "pdv_needs_review",
+      "label": "PDV treatment needs review",
+      "notes": "Do not assume PDV status without invoice/SEF and company profile."
+    },
+    {
+      "id": "pdv_output_20",
+      "label": "Output PDV 20%",
+      "notes": "Use only when applicable."
+    },
+    {
+      "id": "pdv_output_10",
+      "label": "Output PDV 10%",
+      "notes": "Use only when applicable."
+    },
+    {
+      "id": "pdv_exempt_or_not_subject",
+      "label": "PDV exempt / not subject",
+      "notes": "Requires basis and accountant confirmation."
+    },
+    {
+      "id": "pdv_input_review",
+      "label": "Input PDV review",
+      "notes": "Requires supplier invoice/SEF and right to deduct."
+    },
+    {
+      "id": "no_pdv",
+      "label": "No PDV",
+      "notes": "Use when confirmed outside VAT."
+    },
+    {
+      "id": "no_pdv_transfer",
+      "label": "No PDV - cash/bank transfer",
+      "notes": "For transfers, not revenue/expense."
+    },
+    {
+      "id": "no_pdv_or_bank_fee_review",
+      "label": "No PDV / bank-fee review",
+      "notes": "Bank/payment fees need source evidence."
+    },
+    {
+      "id": "payroll_tax_contributions",
+      "label": "Payroll tax/contributions",
+      "notes": "Requires payroll rules and PPP-PD later."
+    },
+    {
+      "id": "tax_payment_review",
+      "label": "Tax payment review",
+      "notes": "Identify tax type before posting."
+    },
+    {
+      "id": "sef_required_review",
+      "label": "SEF / e-faktura matching required",
+      "notes": "Use when transaction should link to e-invoice evidence."
+    },
+    {
+      "id": "needs_accountant_review",
+      "label": "Needs accountant review",
+      "notes": "Fallback for uncertain cases."
+    }
+  ]
+}
