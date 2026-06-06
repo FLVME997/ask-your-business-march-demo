@@ -1,58 +1,22 @@
-# Ask Your Business - Simplified Owner + Accountant Operations v0.7
+# Ask Your Business - Source Evidence Review v0.8
 
-This Railway demo upgrades the current one-company workflow before adding PostgreSQL.
+This Railway demo adds a source evidence viewer inside the Review Center popup.
 
-## What changed in v0.7
+## New in v0.8
 
-- Simplified Owner Portal: the owner sees only business-use status, accounting status, cash summary, and questions requiring owner input.
-- Accountant Operations Center: accountant team sees exception queue, month operations board, template reuse, owner questions, and priority items.
-- Better management-ready vs accounting-ready split.
-- Bulk handling in the Review Center after filtering a safe group of items.
-- Exception grouping by broad review area instead of many technical issue types.
-- Still uses browser localStorage for decisions and exports JSON packages.
+- When you click a Needs Review line, the popup now shows a Source Evidence Viewer.
+- Shows the original workbook name, month, sheet, row/cell reference, and source reference.
+- Shows the normalized/imported transaction or validation/control record created by the app.
+- Shows source rows near the referenced sheet/row, sorted by sheet and row.
+- Shows daily balance controls and monthly status rows from the generated review documents.
+- Includes buttons to open the PDF report and download the generated review workbook.
 
-## What is still intentionally not included
+## Important demo limitation
 
-- PostgreSQL persistence
-- Real login/permissions
-- Real Excel upload/parsing inside Railway
-- OpenAI/API assistant
-- Bank feeds
-- OCR/document extraction
+The raw original Excel workbooks are not bundled in this public Railway demo because they can contain sensitive company/personal data. The app shows workbook locator information and extracted source evidence. In production, this same panel will open the secured original file from private storage.
 
 ## Deploy
 
 Upload the contents of this folder to the root of the existing GitHub repository connected to Railway.
 
-The root of the repository should contain:
-
-```text
-Dockerfile
-server.js
-package.json
-README.md
-.dockerignore
-public/
-```
-
-After Railway redeploys, check:
-
-```text
-/health
-```
-
-It should show version `0.7.0`.
-
-## Test flow
-
-1. Open Owner Portal and confirm it is simple: cash, business-use status, accounting status, owner questions.
-2. Switch to Accountant Operations.
-3. Open exception groups or priority queue.
-4. In Review Center, filter a safe group.
-5. Test one bulk action, such as sending filtered items to accountant review.
-6. Export accountant review pack.
-7. Reset local progress if needed.
-
-## Important warning
-
-This is still Option 1: browser-only local review state. Export your package before clearing browser data or changing computers.
+Check `/health` after deployment. It should show version `0.8.0`.

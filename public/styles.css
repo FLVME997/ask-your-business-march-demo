@@ -17,6 +17,17 @@
 .status-box{border:1px solid var(--line);background:#0b1220;border-radius:14px;padding:12px;margin:10px 0;line-height:1.45}.status-box.good{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08)}.status-box.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}.status-box.bad{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08)}.status-box.purple{border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.08)}
 .role-toggle{align-items:flex-start}.role-toggle .mini{max-width:900px;line-height:1.4}
 
-/* v0.7 simplified owner + accountant operations additions */
-.owner-simple h2{font-size:20px}.owner-simple .notice{margin-top:12px}.owner-simple .soft-item{line-height:1.45}
-.table-wrap table td .btn{padding:7px 9px;border-radius:10px;font-size:12px}.toolbar .mini{align-self:center}.card .soft-list .soft-item strong{color:#e2e8f0}
+/* v0.7 simplified owner + accountant operations */
+.owner-hero,.accountant-hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}.owner-hero h2,.accountant-hero h2{font-size:28px}.owner-status-stack{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;min-width:280px}.owner-action-banner{border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.10);border-radius:18px;padding:16px;margin-bottom:16px;color:#fde68a;display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}.owner-action-banner strong{font-size:18px}.accountant-hero{border-color:rgba(167,139,250,.35)}.accountant-hero .portal-actions{justify-content:flex-end;max-width:760px}.kpi-value{word-break:break-word}.soft-item strong{display:block;margin-bottom:6px}.table-wrap table td .btn{padding:7px 10px;border-radius:10px}.btn.purpleBtn{border-color:rgba(167,139,250,.45);background:rgba(167,139,250,.14);color:#ddd6fe}.section#owner .card h2{font-size:20px}.section#owner .table-wrap{max-height:360px}.section#owner .answer{font-size:15px}.section#accountant .table-wrap{max-height:500px}.portal-tag{font-weight:700;color:#7dd3fc}.owner-hero .muted,.accountant-hero .muted{max-width:860px}.btn.warn{border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.14);color:#fde68a}
+
+/* v0.8 source evidence viewer */
+.evidence-box{margin-top:12px;border-color:rgba(56,189,248,.28);background:rgba(7,17,31,.72)}
+.evidence-box details{border:1px solid var(--line);border-radius:12px;background:#07111f;margin:10px 0;padding:10px}
+.evidence-box summary{cursor:pointer;font-weight:700;color:#bfdbfe;margin-bottom:8px}
+.evidence-box .table-wrap{max-height:260px;margin-top:8px}
+.evidence-box table{font-size:12px}
+.evidence-box td:first-child{color:#cbd5e1;min-width:160px}
+
+/* v0.8 source evidence viewer */
+.evidence-panel{border:1px solid rgba(56,189,248,.30);background:rgba(56,189,248,.045);border-radius:18px;padding:14px;margin:14px 0}
+.evidence-panel h3{margin-top:0}.evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.evidence-note{margin-bottom:12px}.evidence-actions{margin-top:12px;margin-bottom:0}.evidence-panel .table-wrap{max-height:320px}.evidence-panel table{font-size:12px}@media(max-width:900px){.evidence-grid{grid-template-columns:1fr}}

@@ -1,9 +1,16 @@
 let DATA;
+let SOURCE_EVIDENCE = {};
 let selected = 'ALL';
 let currentId = null;
 let REVIEW_UI = { q: '', status: 'needs_review', severity: '', area: '', scrollTop: 0, scrollLeft: 0 };
-const LS_KEY = 'ayb_owner_accountant_operations_v07';
-const APP_VERSION = '0.7.0';
+const LS_KEY = 'ayb_owner_accountant_portal_v08';
+const APP_VERSION = '0.8.0';
+
+const MONTH_ASSETS = {
+  '2020-03': { original_file_name: '31 03 2020.xlsx', review_workbook: '/review-workbooks/University_March_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_March_2020_Import_Review_Report.pdf' },
+  '2020-04': { original_file_name: '30.04.2020..xlsx', review_workbook: '/review-workbooks/University_April_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_April_2020_Import_Review_Report.pdf' },
+  '2020-05': { original_file_name: '29.05.2020..xlsx', review_workbook: '/review-workbooks/University_May_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_May_2020_Import_Review_Report.pdf' }
+};
 
 let STATE = blankState();
 
@@ -185,6 +192,127 @@ function openTasks(period = selected) {
 }
 function audit(action, payload = {}) { STATE.auditEvents.push({ at: now(), action, ...payload }); }
 
+
+function simpleMonthStatus(m) {
+  const mg = managementStatus(m.period);
+  const fm = formalStatus(m.period);
+  const ts = openTasks(m.period).length;
+  let owner = 'No owner action';
+  let tone = 'good';
+  if (ts > 0) { owner = `${ts} answer needed`; tone = 'warn'; }
+  else if (mg.tone === 'warn') { owner = 'Accountant team working'; tone = 'info'; }
+  return { mg, fm, owner, tone };
+}
+function monthTrendSentence() {
+  const rows = DATA.months.map(m => ({ label: m.label, net: adjSummary(m.period).net, closing: adjSummary(m.period).closing }));
+  const best = [...rows].sort((a,b)=>b.net-a.net)[0];
+  const worst = [...rows].sort((a,b)=>a.net-b.net)[0];
+  const last = rows[rows.length - 1];
+  return `Across the imported months, ${best.label} had the strongest cash movement (${money(best.net)}), while ${worst.label} had the weakest (${money(worst.net)}). Latest closing cash shown is ${money(last.closing)}.`;
+}
+function groupOpenIssues(period = selected) {
+  const out = {};
+  (period === 'ALL' ? allItems() : allItems().filter(i => i.period === period)).forEach(i => {
+    if (!needsAccountantWork(i)) return;
+    const g = generalIssueType(i);
+    out[g] = out[g] || { group: g, count: 0, high: 0, medium: 0, low: 0, value: 0 };
+    out[g].count += 1;
+    const sev = String(i.severity || '').toLowerCase();
+    if (sev.includes('high')) out[g].high += 1;
+    else if (sev.includes('medium')) out[g].medium += 1;
+    else out[g].low += 1;
+    const tx = txById(i.related_object_id);
+    if (tx) out[g].value += Number(effTx(tx).amount_rsd_equivalent || 0);
+  });
+  return Object.values(out).sort((a,b)=>b.high-a.high || b.count-a.count);
+}
+function topPriorityItems(limit = 8, period = selected) {
+  const rank = i => {
+    const sev = String(i.severity || '').toLowerCase();
+    const tx = txById(i.related_object_id);
+    return (sev.includes('high') ? 1000000000 : sev.includes('medium') ? 500000000 : 0) + Math.abs(Number(tx?.amount_rsd_equivalent || 0));
+  };
+  return (period === 'ALL' ? allItems() : allItems().filter(i => i.period === period))
+    .filter(needsAccountantWork)
+    .sort((a,b)=>rank(b)-rank(a))
+    .slice(0, limit);
+}
+function templateAutomationRows() {
+  return DATA.months.map(m => {
+    const s = m.summary;
+    const reuse = Number(s.template_reuse_rate_percent || 0);
+    let msg = reuse >= 95 ? 'High automation - review exceptions only' : reuse > 0 ? 'Template reused - review new patterns' : 'Initial setup month - build template';
+    return { month: m.label, reuse, catReuse: Number(s.category_reuse_rate_percent || 0), extracted: s.transactions_extracted, review: s.manual_review_items, quality: s.data_quality_score, msg };
+  });
+}
+function canBulkManagementReady(i) {
+  if (!needsAccountantWork(i)) return false;
+  if (String(i.severity || '').toLowerCase().includes('high')) return false;
+  if (generalIssueType(i) === 'Validation / control') return false;
+  if (itemStatus(i) === 'needs_owner_clarification') return false;
+  return true;
+}
+function bulkMarkLowRiskManagementReady() {
+  if (role() !== 'accountant') return alert('Switch to Accountant Workbench first.');
+  const candidates = scopeItems().filter(canBulkManagementReady);
+  if (!candidates.length) return alert('No low-risk non-control review items match the current month scope.');
+  if (!confirm(`Mark ${candidates.length} low-risk exception item(s) as management-ready with accountant certification still pending?`)) return;
+  candidates.forEach(i => {
+    STATE.decisions[i.review_item_id] = {
+      review_item_id: i.review_item_id,
+      period: i.period,
+      status: 'management_ready',
+      resolution_type: 'Bulk management-ready exception clearance',
+      role: role(),
+      review_area: generalIssueType(i),
+      reviewer: 'Accountant Operations',
+      note: 'Bulk-cleared as low-risk for management analysis. Accountant certification still pending.',
+      decided_at: now(),
+      before: { review_item: i, transaction: txById(i.related_object_id) || null },
+      after: { review_item_status: 'management_ready' },
+      source_reference: i.source_reference,
+      related_object_id: i.related_object_id,
+      management_analysis_status: 'usable_with_limitations',
+      accountant_review_status: 'pending_or_reviewed',
+      formal_reporting_status: 'not_certified'
+    };
+    audit('bulk_management_ready_item', { review_item_id: i.review_item_id, period: i.period });
+  });
+  saveState(); renderAll(); setActiveSection('accountant');
+  alert(`${candidates.length} low-risk item(s) marked management-ready.`);
+}
+function sendVisibleOwnerQuestions() {
+  if (role() !== 'accountant') return alert('Switch to Accountant Workbench first.');
+  const candidates = scopeItems().filter(i => needsAccountantWork(i) && !taskFor(i.review_item_id) && (generalIssueType(i) === 'Transaction review' || String(i.suggested_action || '').toLowerCase().includes('confirm'))).slice(0, 10);
+  if (!candidates.length) return alert('No obvious owner-context questions found in this scope.');
+  if (!confirm(`Create owner clarification tasks for ${candidates.length} item(s)?`)) return;
+  candidates.forEach(i => {
+    STATE.clarificationTasks[i.review_item_id] = { task_id: `TASK-${i.review_item_id}`, period: i.period, review_item_id: i.review_item_id, status: 'open', question: i.suggested_action || i.description, asked_by: 'Accountant Operations', asked_at: now(), owner_answer: '' };
+    STATE.decisions[i.review_item_id] = {
+      review_item_id: i.review_item_id,
+      period: i.period,
+      status: 'needs_owner_clarification',
+      resolution_type: 'Owner clarification requested',
+      role: role(),
+      review_area: generalIssueType(i),
+      reviewer: 'Accountant Operations',
+      note: 'Sent to owner for business-context clarification.',
+      owner_question: i.suggested_action || i.description,
+      decided_at: now(),
+      before: { review_item: i, transaction: txById(i.related_object_id) || null },
+      after: { review_item_status: 'needs_owner_clarification' },
+      source_reference: i.source_reference,
+      related_object_id: i.related_object_id,
+      management_analysis_status: 'not_ready',
+      accountant_review_status: 'needs_owner_clarification',
+      formal_reporting_status: 'not_certified'
+    };
+    audit('bulk_owner_question_created', { review_item_id: i.review_item_id, period: i.period });
+  });
+  saveState(); renderAll(); setActiveSection('accountant');
+  alert(`${candidates.length} owner clarification task(s) created.`);
+}
+
 function renderAll() {
   document.getElementById('badge').textContent = `${DATA.company_code} • v${APP_VERSION}`;
   renderRoleBar();
@@ -226,123 +354,105 @@ function statusBox(title, status, body = '') {
 }
 
 function renderOwnerPortal() {
-  const st = stats(), a = adjSummary(), mg = managementStatus(), fm = formalStatus(), tasks = openTasks();
-  const ownerReady = mg.tone === 'good' || mg.tone === 'purple';
-  const actionMessage = tasks.length ? `${tasks.length} question(s) need your answer` : 'No owner action needed';
+  const a = adjSummary();
+  const totalTasks = openTasks().length;
+  const mgAll = managementStatus();
+  const fmAll = formalStatus();
+  const currentCompany = 'University Demo';
   const cards = [
-    kpi('Cash position', money(a.closing), 'Current management view from reviewed/imported data', a.closing >= 0 ? 'pos' : 'neg'),
-    kpi('Your action', actionMessage, tasks.length ? 'Only answer business-context questions, not accounting issues.' : 'Your accountant team can continue in the background.', tasks.length ? 'warnText' : 'pos'),
-    kpi('Business view status', mg.label, mg.detail, ownerReady ? 'purpleText' : 'warnText'),
-    kpi('Accounting status', fm.label, 'Formal certification is handled by accountant side.', fm.tone === 'good' ? 'pos' : 'warnText')
+    kpi('Current cash shown', money(a.closing), 'Latest imported management view', a.closing >= 0 ? 'pos' : 'neg'),
+    kpi('3-month cash movement', money(a.net), monthTrendSentence(), a.net >= 0 ? 'pos' : 'neg'),
+    kpi('Questions for you', totalTasks, 'Only owner-context questions are shown here', totalTasks ? 'warnText' : 'pos'),
+    kpi('Accountant status', fmAll.label, 'Formal certification handled by accountant team', fmAll.tone === 'good' ? 'pos' : 'warnText')
   ].join('');
-  const ownerBanner = tasks.length
-    ? `<div class="owner-warning"><strong>Action needed:</strong> Your accountant team needs ${tasks.length} answer(s). Once answered, they can continue certification. You do not need to resolve accounting treatment yourself.</div>`
-    : `<div class="ready-banner"><strong>No action needed from owner right now.</strong> Your accountant team can continue reviewing and certifying in the background. Use the dashboard with the status label shown below.</div>`;
-  const monthRows = DATA.months.map(m => {
-    const s = stats(m.period), aa = adjSummary(m.period), mgm = managementStatus(m.period), fmm = formalStatus(m.period), ts = openTasks(m.period).length;
-    const ownerNext = ts ? 'Answer question' : (mgm.tone === 'warn' ? 'Accountant working' : 'View dashboard');
-    return `<tr><td>${esc(m.label)}</td><td>${pill(mgm.label, mgm.tone)}</td><td>${pill(fmm.label, fmm.tone)}</td><td>${ts ? pill(`${ts} question(s)`, 'warn') : pill('None', 'good')}</td><td>${esc(ownerNext)}</td><td>${money(aa.net)}</td><td>${money(aa.closing)}</td></tr>`;
-  });
-  const taskRows = tasks.slice(0, 8).map(t => {
+  const ownerTasks = openTasks().slice(0, 6).map(t => {
     const i = itemById(t.review_item_id);
-    return `<tr class="clickable-row" data-open-item="${esc(t.review_item_id)}"><td>${esc(t.period)}</td><td>${esc(t.review_item_id)}</td><td>${pill(t.status)}</td><td>${esc(t.question || i?.suggested_action || i?.description || '')}</td><td>${esc(i?.source_reference || '')}</td><td><button class="btn primary" onclick="openModal('${esc(t.review_item_id)}');event.stopPropagation()">Answer</button></td></tr>`;
+    return `<div class="soft-item clickable-row" data-open-item="${esc(t.review_item_id)}"><strong>${esc(t.period)} • ${esc(i?.source_reference || t.review_item_id)}</strong><div class="muted">${esc(t.question || i?.suggested_action || i?.description || '')}</div>${t.owner_answer ? `<div class="mini">Current answer: ${esc(t.owner_answer)}</div>` : ''}</div>`;
+  }).join('');
+  const monthRows = DATA.months.map(m => {
+    const st = simpleMonthStatus(m), aa = adjSummary(m.period);
+    return `<tr><td>${esc(m.label)}</td><td>${pill(st.mg.label, st.mg.tone)}</td><td>${pill(st.fm.label, st.fm.tone)}</td><td>${pill(st.owner, st.tone)}</td><td>${money(aa.net)}</td><td>${money(aa.closing)}</td></tr>`;
   });
+  const headline = totalTasks
+    ? `<div class="owner-action-banner"><strong>${totalTasks} question(s) need your answer.</strong><div>Your accountant team only sends questions when they need business context. Answering these helps them finish certification faster.</div><button class="btn primary" onclick="setActiveSection('shared')">Answer questions</button></div>`
+    : `<div class="ready-banner"><strong>No owner action needed right now.</strong><div>Your accountant team can continue working in the background. You can use management-ready information with the limitations shown.</div></div>`;
   document.getElementById('owner').innerHTML = `
-    ${ownerBanner}
-    <div class="grid cards">${cards}</div>
-    <div class="grid two">
-      <div class="card owner-simple"><div class="portal-tag">Owner view</div><h2>What you need to know</h2>
-        <div class="status-box ${mg.tone}"><div class="mini">Can I use this for business decisions?</div><strong>${esc(mg.label)}</strong><div class="muted">${esc(mg.detail)}</div></div>
-        <div class="status-box ${fm.tone}"><div class="mini">Can I use this for formal accounting?</div><strong>${esc(fm.label)}</strong><div class="muted">${esc(fm.detail)}</div></div>
-        <div class="notice"><strong>Plain-English rule:</strong> if it is management-ready, you can use it to understand the business. If it is not accountant-certified, do not use it for tax, audit, or formal accounts yet.</div>
+    <div class="owner-hero card">
+      <div>
+        <div class="portal-tag">Owner portal • simplified business view</div>
+        <h2>${esc(currentCompany)}</h2>
+        <p class="muted">This view hides accounting complexity. It shows only what you need to know: business status, cash movement, questions for you, and whether accountant certification is still pending.</p>
       </div>
-      <div class="card owner-simple"><div class="portal-tag">Owner time protection</div><h2>Your only jobs</h2>
-        <div class="soft-list">
-          <div class="soft-item"><strong>1. Answer questions</strong><div class="muted">Only when your accountant team needs business context.</div></div>
-          <div class="soft-item"><strong>2. Upload missing files</strong><div class="muted">Later this becomes document requests. For now, this demo tracks questions.</div></div>
-          <div class="soft-item"><strong>3. Read the dashboard</strong><div class="muted">The review work stays in the accountant operations center.</div></div>
-        </div>
+      <div class="owner-status-stack">
+        ${pill(mgAll.label, mgAll.tone)} ${pill(fmAll.label, fmAll.tone)} ${pill(totalTasks ? 'Owner action needed' : 'No owner action', totalTasks ? 'warn' : 'good')}
       </div>
     </div>
-    <div class="card"><h2>Company/month status for owner</h2>${table(['Month','Business-use status','Accounting status','Owner action','Next step','Net movement','Closing cash'], monthRows)}</div>
-    <div class="card"><h2>Questions requiring owner answer</h2>${taskRows.length ? table(['Period','Review item','Task status','Question','Source','Action'], taskRows) : '<div class="notice oknotice">No owner clarification tasks are open.</div>'}</div>
+    ${headline}
+    <div class="grid cards">${cards}</div>
+    <div class="grid two">
+      <div class="card"><h2>Plain-English status</h2>
+        <div class="status-box ${mgAll.tone}"><strong>Business view</strong><div>${esc(mgAll.detail)}</div></div>
+        <div class="status-box ${fmAll.tone}"><strong>Accounting view</strong><div>${esc(fmAll.detail)}</div></div>
+        <div class="notice"><strong>Important:</strong> management-ready data is useful for business decisions and visibility. Accountant-certified data is needed for formal accounting, tax, or statutory reporting.</div>
+      </div>
+      <div class="card"><h2>What you need to do</h2>${ownerTasks || '<div class="notice oknotice">Nothing right now. Your accountant team is handling the review work.</div>'}</div>
+    </div>
+    <div class="card"><h2>Company timeline</h2><p class="muted">Simple monthly view. Detailed validation and mapping tasks stay in the accountant workbench.</p>${table(['Month','Business view','Accounting status','Owner action','Cash movement','Closing cash'], monthRows)}</div>
+    <div class="card"><h2>Business summary</h2><div class="answer">${esc(monthTrendSentence())}\n\nThe owner portal will eventually show all companies here. For now, this demo uses one real company dataset while the accountant workbench proves the data-alignment workflow.</div></div>
   `;
   document.querySelectorAll('[data-open-item]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.openItem)));
 }
 
-function nextActionForMonth(period) {
-  const s = stats(period), mg = managementStatus(period), fm = formalStatus(period), tasks = openTasks(period).length;
-  if (tasks) return 'Waiting for owner answer';
-  if (s.management_blocking > 0) return 'Resolve management blockers';
-  if (mg.label !== 'Management-ready' && mg.label !== 'Accountant-certified') return 'Mark management-ready';
-  if (s.formal_blocking > 0) return 'Certify remaining items';
-  if (fm.label !== 'Accountant-certified') return 'Accountant certify period';
-  return 'Ready / locked later';
-}
-function triageCounts(period = selected) {
-  const items = period === 'ALL' ? scopeItems() : allItems().filter(i => i.period === period);
-  const groups = {};
-  items.forEach(i => {
-    const key = `${generalIssueType(i)}|${i.severity || 'Unknown'}`;
-    if (!groups[key]) groups[key] = { area: generalIssueType(i), severity: i.severity || 'Unknown', total: 0, open: 0, value: 0 };
-    groups[key].total += 1;
-    if (needsAccountantWork(i)) groups[key].open += 1;
-    const tx = txById(i.related_object_id);
-    if (tx) groups[key].value += Number(tx.amount_rsd_equivalent || 0);
-  });
-  return Object.values(groups).sort((a,b) => b.open - a.open || b.value - a.value);
-}
 function renderAccountantWorkbench() {
-  const st = stats(), a = adjSummary(), tasks = openTasks(), needs = scopeItems().filter(needsAccountantWork).length;
-  const autoClean = DATA.portfolio_summary.transactions_extracted - DATA.portfolio_summary.manual_review_items;
-  const cards = [
-    kpi('Exception queue', needs, 'Only exceptions should need accountant attention', needs ? 'warnText' : 'pos'),
-    kpi('Auto-prepared rows', autoClean, 'Rows extracted without manual review items across loaded months', 'pos'),
-    kpi('Owner questions', tasks.length, 'Questions currently routed to owner', tasks.length ? 'warnText' : 'pos'),
-    kpi('Adjusted closing', money(a.closing), 'After local review edits and adjustments', a.closing >= 0 ? 'pos' : 'neg')
-  ].join('');
+  const st = stats();
+  const a = adjSummary();
+  const tasks = openTasks();
+  const pending = scopeItems().filter(needsAccountantWork);
+  const issueGroups = groupOpenIssues();
+  const priority = topPriorityItems(8);
+  const automationRows = templateAutomationRows().map(r => `<tr><td>${esc(r.month)}</td><td>${r.reuse.toFixed(1)}%</td><td>${r.catReuse.toFixed(1)}%</td><td>${r.extracted}</td><td>${r.review}</td><td>${Number(r.quality).toFixed(1)}/100</td><td>${esc(r.msg)}</td></tr>`);
+  const groupRows = issueGroups.map(g => `<tr><td>${pill(g.group, 'purple')}</td><td>${g.count}</td><td>${g.high}</td><td>${g.medium}</td><td>${g.low}</td><td>${money(g.value)}</td><td><button class="btn" onclick="REVIEW_UI.area='${esc(g.group)}'; REVIEW_UI.status=''; setActiveSection('review'); renderReview();">Open group</button></td></tr>`);
+  const priorityRows = priority.map(i => {
+    const tx = txById(i.related_object_id), et = tx ? effTx(tx) : null;
+    return `<tr class="clickable-row" data-open-item="${esc(i.review_item_id)}"><td>${esc(i.period)}</td><td>${pill(i.severity)}</td><td>${pill(generalIssueType(i),'purple')}</td><td>${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}</td><td>${et ? money(et.amount_rsd_equivalent) : ''}</td><td>${esc(i.description)}</td><td>${esc(i.source_reference || '')}</td></tr>`;
+  });
   const monthRows = DATA.months.map(m => {
     const s = stats(m.period), mg = managementStatus(m.period), fm = formalStatus(m.period), bs = batchStatus(m.period);
-    return `<tr><td>${esc(m.label)}</td><td>${m.summary.transactions_extracted}</td><td>${m.summary.template_reuse_rate_percent ?? 0}%</td><td>${m.summary.category_reuse_rate_percent ?? 0}%</td><td>${s.total}</td><td>${s.management_blocking}</td><td>${s.formal_blocking}</td><td>${openTasks(m.period).length}</td><td>${pill(mg.label, mg.tone)}</td><td>${pill(fm.label, fm.tone)}</td><td>${esc(nextActionForMonth(m.period))}</td></tr>`;
+    return `<tr><td>${esc(m.label)}</td><td>${s.total}</td><td>${s.management_blocking}</td><td>${s.formal_blocking}</td><td>${openTasks(m.period).length}</td><td>${pill(mg.label, mg.tone)}</td><td>${pill(fm.label, fm.tone)}</td><td>${bs.management_ready ? esc(bs.management_ready_at || '') : ''}</td></tr>`;
   });
-  const groupRows = triageCounts().map(g => `<tr><td>${pill(g.area, 'purple')}</td><td>${pill(g.severity)}</td><td>${g.open}</td><td>${g.total}</td><td>${money(g.value)}</td><td><button class="btn" onclick="setReviewFilter('', '${esc(g.severity)}', '${esc(g.area)}')">Open group</button></td></tr>`);
-  const priority = scopeItems().filter(needsAccountantWork).sort((x,y) => {
-    const sev = v => v === 'High' ? 3 : v === 'Medium' ? 2 : 1;
-    const txv = z => Number(txById(z.related_object_id)?.amount_rsd_equivalent || 0);
-    return sev(y.severity) - sev(x.severity) || txv(y) - txv(x);
-  }).slice(0, 12).map(i => {
-    const tx = txById(i.related_object_id);
-    return `<tr class="clickable-row" data-open-item="${esc(i.review_item_id)}"><td>${esc(i.period)}</td><td>${esc(i.review_item_id)}</td><td>${pill(i.severity)}</td><td>${pill(generalIssueType(i), 'purple')}</td><td>${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}</td><td>${tx ? money(tx.amount_rsd_equivalent) : ''}</td><td>${esc(i.description)}</td><td>${esc(i.source_reference || '')}</td></tr>`;
-  });
+  const cards = [
+    kpi('Open accountant items', pending.length, 'Exception-only queue, not row-by-row review', pending.length ? 'warnText' : 'pos'),
+    kpi('Owner questions open', tasks.length, 'Business-context items sent to owner', tasks.length ? 'warnText' : 'pos'),
+    kpi('Low-risk bulk candidates', scopeItems().filter(canBulkManagementReady).length, 'Can be moved to management-ready in bulk', 'purpleText'),
+    kpi('Adjusted closing cash', money(a.closing), 'After local review edits and adjustments', a.closing >= 0 ? 'pos' : 'neg')
+  ].join('');
   document.getElementById('accountant').innerHTML = `
+    <div class="accountant-hero card">
+      <div>
+        <div class="portal-tag">Accountant operations center • one-company workflow first</div>
+        <h2>Make data ready with exception-only review</h2>
+        <p class="muted">This side is designed for your accountant team: apply templates, review only exceptions, ask the owner only for business context, mark management-ready, and later accountant-certify the period.</p>
+      </div>
+      <div class="portal-actions">
+        <button class="btn primary" onclick="setActiveSection('review')">Open exception queue</button>
+        <button class="btn purpleBtn" onclick="bulkMarkLowRiskManagementReady()">Bulk management-ready low-risk</button>
+        <button class="btn warn" onclick="sendVisibleOwnerQuestions()">Create owner questions</button>
+        <button class="btn good" onclick="exportAccountantPack()">Export accountant pack</button>
+      </div>
+    </div>
     <div class="grid cards">${cards}</div>
     <div class="grid two">
-      <div class="card"><div class="portal-tag">Accountant operations center</div><h2>Fast workflow</h2><p class="muted">The app should prepare the data automatically, route only exceptions to the accountant team, and keep the owner involved only for business-context questions.</p>
-        <div class="actions">
-          <button class="btn primary" onclick="setActiveSection('review')">Open exception queue</button>
-          <button class="btn" onclick="setReviewFilter('needs_review','','')">Needs review only</button>
-          <button class="btn" onclick="setReviewFilter('needs_owner_clarification','','')">Owner questions</button>
-          <button class="btn good" onclick="exportAccountantPack()">Export accountant pack</button>
-        </div>
-      </div>
-      <div class="card"><div class="portal-tag">Automation status</div><h2>Template reuse and future files</h2>
-        <div class="soft-list">
-          <div class="soft-item"><strong>March:</strong> initial setup month. Heavy review creates the first template.</div>
-          <div class="soft-item"><strong>April:</strong> template reuse ${DATA.months[1].summary.template_reuse_rate_percent}% and category reuse ${DATA.months[1].summary.category_reuse_rate_percent}%.</div>
-          <div class="soft-item"><strong>May:</strong> template reuse ${DATA.months[2].summary.template_reuse_rate_percent}% and category reuse ${DATA.months[2].summary.category_reuse_rate_percent}%.</div>
-        </div>
-      </div>
-    </div>
-    <div class="card"><h2>Month operations board</h2>${table(['Month','Tx extracted','Template reuse','Category reuse','Queue','Mgmt blockers','Formal blockers','Owner tasks','Management','Accounting','Next action'], monthRows)}</div>
-    <div class="grid two">
-      <div class="card"><h2>Exception groups</h2>${groupRows.length ? table(['Review area','Severity','Open','Total','Linked value','Action'], groupRows) : '<div class="notice oknotice">No exception groups in this scope.</div>'}</div>
-      <div class="card"><h2>Accountant-side bulk handling</h2><p class="muted">Open the Review Center, filter the queue, then apply a bulk action to the filtered items. This is how similar files become efficient over time.</p><div class="soft-list">
-        <div class="soft-item"><strong>Low-risk known items:</strong> bulk accept for management analysis.</div>
-        <div class="soft-item"><strong>Unclear accounting treatment:</strong> bulk send to accountant review.</div>
-        <div class="soft-item"><strong>Reviewed items:</strong> bulk accountant certify after professional check.</div>
+      <div class="card"><h2>Template automation for similar files</h2><p class="muted">March created the initial template. April and May show the automation effect when similar monthly workbooks are imported.</p>${table(['Month','Template reuse','Category reuse','Rows','Review items','Quality','Automation note'], automationRows)}</div>
+      <div class="card"><h2>Recommended workflow</h2><div class="timeline">
+        <div class="step"><div class="num">1</div><div><strong>Apply company template</strong><div class="muted">Known sheets, categories and validation checks are reused.</div></div></div>
+        <div class="step"><div class="num">2</div><div><strong>Review exceptions only</strong><div class="muted">Low-risk items can move to management-ready; high-risk/control issues stay for accountant review.</div></div></div>
+        <div class="step"><div class="num">3</div><div><strong>Ask owner only when needed</strong><div class="muted">Owner only receives simple business-context questions.</div></div></div>
+        <div class="step"><div class="num">4</div><div><strong>Certify period</strong><div class="muted">Management-ready first, accountant-certified after formal review.</div></div></div>
       </div></div>
     </div>
-    <div class="card"><h2>Priority queue</h2>${priority.length ? table(['Period','Item','Severity','Area','Status','Amount','Description','Source'], priority) : '<div class="notice oknotice">No accountant priority items in this scope.</div>'}</div>
+    <div class="card"><h2>Exception groups</h2>${groupRows.length ? table(['Group','Open items','High','Medium','Low/info','Linked value','Action'], groupRows) : '<div class="notice oknotice">No open exception groups in this scope.</div>'}</div>
+    <div class="card"><h2>Priority queue</h2>${priorityRows.length ? table(['Period','Severity','Area','Status','Amount','Issue','Source'], priorityRows) : '<div class="notice oknotice">No priority items remain.</div>'}</div>
+    <div class="card"><h2>Month readiness board</h2>${table(['Month','Queue','Mgmt blockers','Formal blockers','Owner tasks','Management','Accounting','Mgmt-ready at'], monthRows)}</div>
   `;
   document.querySelectorAll('[data-open-item]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.openItem)));
 }
@@ -381,59 +491,6 @@ function itemMatchesReviewUI(i) {
 function restoreReviewScroll() { requestAnimationFrame(() => { const wrap = document.querySelector('#reviewTable .table-wrap'); if (wrap) { wrap.scrollTop = REVIEW_UI.scrollTop || 0; wrap.scrollLeft = REVIEW_UI.scrollLeft || 0; wrap.onscroll = () => { REVIEW_UI.scrollTop = wrap.scrollTop || 0; REVIEW_UI.scrollLeft = wrap.scrollLeft || 0; }; } }); }
 function nextMatchingReviewItem(excludeId) { return scopeItems().find(x => x.review_item_id !== excludeId && itemMatchesReviewUI(x) && !['accountant_certified', 'rejected', 'management_ready'].includes(itemStatus(x))) || scopeItems().find(x => x.review_item_id !== excludeId && needsAccountantWork(x)); }
 
-function setReviewFilter(status = '', severity = '', area = '', q = '') {
-  REVIEW_UI.status = status;
-  REVIEW_UI.severity = severity;
-  REVIEW_UI.area = area;
-  REVIEW_UI.q = q;
-  REVIEW_UI.scrollTop = 0;
-  REVIEW_UI.scrollLeft = 0;
-  setActiveSection('review');
-  renderReview();
-}
-function filteredReviewItems() {
-  captureReviewUI();
-  return scopeItems().filter(itemMatchesReviewUI);
-}
-function bulkSetFiltered(status) {
-  captureReviewUI();
-  const items = filteredReviewItems().filter(i => !['accountant_certified', 'rejected'].includes(itemStatus(i)));
-  if (!items.length) return alert('No editable items match the current filters.');
-  const label = statusLabel(status);
-  if (!confirm(`Apply "${label}" to ${items.length} filtered item(s)?\n\nUse this only after the current filter represents a safe work group.`)) return;
-  const reviewer = 'Bulk Accountant Reviewer';
-  items.forEach(i => {
-    STATE.decisions[i.review_item_id] = {
-      review_item_id: i.review_item_id,
-      period: i.period,
-      status,
-      resolution_type: `bulk_${status}`,
-      role: 'accountant',
-      review_area: generalIssueType(i),
-      reviewer,
-      note: `Bulk action applied from Accountant Operations Center / Review Center filtered queue.`,
-      decided_at: now(),
-      before: { review_item: i, previous_status: itemStatus(i) },
-      after: { review_item_status: status },
-      source_reference: i.source_reference,
-      related_object_id: i.related_object_id,
-      management_analysis_status: ['owner_reviewed', 'management_ready', 'needs_accountant_review', 'accountant_certified'].includes(status) ? 'usable_with_limitations' : status === 'rejected' ? 'excluded' : 'not_ready',
-      accountant_review_status: status === 'accountant_certified' ? 'certified' : ['needs_accountant_review', 'owner_reviewed', 'management_ready'].includes(status) ? 'pending_or_reviewed' : status,
-      formal_reporting_status: status === 'accountant_certified' ? 'accountant_certified' : status === 'rejected' ? 'excluded' : 'not_certified'
-    };
-    if (['management_ready','accountant_certified','rejected'].includes(status) && STATE.clarificationTasks[i.review_item_id]) {
-      STATE.clarificationTasks[i.review_item_id].status = 'closed';
-      STATE.clarificationTasks[i.review_item_id].closed_by = reviewer;
-      STATE.clarificationTasks[i.review_item_id].closed_at = now();
-    }
-  });
-  audit('bulk_review_action', { status, item_count: items.length, selected_scope: selected, filters: { ...REVIEW_UI } });
-  saveState();
-  renderAll();
-  setActiveSection('review');
-  restoreReviewScroll();
-}
-
 function renderReview() {
   const items = scopeItems();
   const areas = [...new Set(items.map(generalIssueType))].sort();
@@ -441,20 +498,16 @@ function renderReview() {
   const statusOpts = [['', 'All statuses'], ...Object.keys(STATUS_META).map(k => [k, STATUS_META[k].label])].map(([v, l]) => `<option value="${esc(v)}" ${REVIEW_UI.status === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const sevOpts = `<option value="" ${REVIEW_UI.severity === '' ? 'selected' : ''}>All severities</option>` + sevs.map(x => `<option value="${esc(x)}" ${REVIEW_UI.severity === x ? 'selected' : ''}>${esc(x)}</option>`).join('');
   const areaOpts = `<option value="" ${REVIEW_UI.area === '' ? 'selected' : ''}>All review areas</option>` + areas.map(x => `<option value="${esc(x)}" ${REVIEW_UI.area === x ? 'selected' : ''}>${esc(x)}</option>`).join('');
-  document.getElementById('review').innerHTML = `<div class="card"><h2>Manual Review Queue</h2><p class="muted">Exception-based accountant/team workspace. Filter first, then review one-by-one or apply a bulk action to a safe group of similar items.</p><div class="toolbar"><input id="rq" placeholder="Search issue, source, category..." value="${esc(REVIEW_UI.q)}" oninput="renderReviewTable()"><select id="rs" onchange="renderReviewTable()">${statusOpts}</select><select id="rv" onchange="renderReviewTable()">${sevOpts}</select><select id="ra" onchange="renderReviewTable()">${areaOpts}</select></div><div class="toolbar"><span class="mini">Bulk actions for currently filtered items:</span><button class="btn purpleBtn" onclick="bulkSetFiltered('management_ready')">Bulk accept for management</button><button class="btn warn" onclick="bulkSetFiltered('needs_accountant_review')">Bulk needs accountant review</button><button class="btn good" onclick="bulkSetFiltered('accountant_certified')">Bulk accountant certify</button><button class="btn bad" onclick="bulkSetFiltered('rejected')">Bulk reject/exclude</button></div><div class="toolbar"><button class="btn primary" onclick="exportPackage()">Export certified package</button><button class="btn good" onclick="exportAccountantPack()">Export accountant review pack</button><button class="btn" onclick="exportState()">Export decisions only</button><button class="btn bad" onclick="resetProgress()">Reset local progress</button></div><div id="reviewTable"></div></div>`;
+  document.getElementById('review').innerHTML = `<div class="card"><h2>Manual Review Queue</h2><p class="muted">Accountant/team workspace for issue review. Use management-ready when the owner dashboard can use the data with limitations. Use accountant-certified only when professional/accountant review is complete.</p><div class="toolbar"><input id="rq" placeholder="Search issue, source, category..." value="${esc(REVIEW_UI.q)}" oninput="renderReviewTable()"><select id="rs" onchange="renderReviewTable()">${statusOpts}</select><select id="rv" onchange="renderReviewTable()">${sevOpts}</select><select id="ra" onchange="renderReviewTable()">${areaOpts}</select></div><div class="toolbar"><button class="btn primary" onclick="exportPackage()">Export certified package</button><button class="btn good" onclick="exportAccountantPack()">Export accountant review pack</button><button class="btn" onclick="exportState()">Export decisions only</button><button class="btn bad" onclick="resetProgress()">Reset local progress</button></div><div id="reviewTable"></div></div>`;
   renderReviewTable();
 }
 function renderReviewTable() {
   captureReviewUI();
-  const filtered = scopeItems().filter(itemMatchesReviewUI);
-  const rows = filtered.map(i => {
+  const rows = scopeItems().filter(itemMatchesReviewUI).map(i => {
     const tx = txById(i.related_object_id), et = tx ? effTx(tx) : null, d = STATE.decisions[i.review_item_id], task = taskFor(i.review_item_id);
-    const value = et ? Number(et.amount_rsd_equivalent || 0) : 0;
-    const triage = i.severity === 'High' || value > 50000 ? 'High priority' : generalIssueType(i) === 'Validation / control' ? 'Control review' : 'Standard exception';
-    return `<tr class="clickable-row" data-review-id="${esc(i.review_item_id)}"><td>${esc(i.period)}</td><td>${esc(i.review_item_id)}</td><td>${pill(i.severity)}</td><td>${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}</td><td>${pill(generalIssueType(i), 'purple')}</td><td>${pill(triage, triage === 'High priority' ? 'bad' : 'info')}</td><td class="mini">${esc(i.issue_type)}</td><td>${et ? esc(et.raw_category) : ''}</td><td>${et ? money(et.amount_rsd_equivalent) : ''}</td><td>${task ? pill(task.status) : ''}</td><td>${esc(i.source_reference)}</td><td>${esc(i.description)}</td><td>${d ? esc(d.resolution_type) : 'Click to review'}</td></tr>`;
+    return `<tr class="clickable-row" data-review-id="${esc(i.review_item_id)}"><td>${esc(i.period)}</td><td>${esc(i.review_item_id)}</td><td>${pill(i.severity)}</td><td>${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}</td><td>${pill(generalIssueType(i), 'purple')}</td><td class="mini">${esc(i.issue_type)}</td><td>${et ? esc(et.raw_category) : ''}</td><td>${et ? money(et.amount_rsd_equivalent) : ''}</td><td>${task ? pill(task.status) : ''}</td><td>${esc(i.source_reference)}</td><td>${esc(i.description)}</td><td>${d ? esc(d.resolution_type) : 'Click to review'}</td></tr>`;
   });
-  const summary = `<div class="notice"><strong>Filtered items:</strong> ${filtered.length}. Review one item by clicking a row, or use bulk actions only after filtering to a safe group.</div>`;
-  document.getElementById('reviewTable').innerHTML = summary + table(['Period', 'ID', 'Severity', 'Status', 'Review area', 'Triage', 'Raw type', 'Raw category', 'Amount', 'Owner task', 'Source', 'Description', 'Decision'], rows.length ? rows : [`<tr><td colspan="13"><div class="notice oknotice">No items match the current filters.</div></td></tr>`]);
+  document.getElementById('reviewTable').innerHTML = table(['Period', 'ID', 'Severity', 'Status', 'Review area', 'Raw type', 'Raw category', 'Amount', 'Owner task', 'Source', 'Description', 'Decision'], rows.length ? rows : [`<tr><td colspan="12"><div class="notice oknotice">No items match the current filters.</div></td></tr>`]);
   document.querySelectorAll('[data-review-id]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.reviewId)));
   restoreReviewScroll();
 }
@@ -519,23 +572,197 @@ function ask(q) {
   document.getElementById('answer').textContent = ans;
 }
 function renderReports() {
-  const links = DATA.months.map(m => `<div class="step"><div class="num">PDF</div><div><strong>${m.label} report</strong><div class="muted">Human review report.</div></div><a class="btn primary" href="${m.summary.pdf_report}" target="_blank">Open</a></div>`).join('');
-  document.getElementById('reports').innerHTML = `<div class="card"><h2>Reports</h2><div class="timeline">${links}</div></div>`;
+  const links = DATA.months.map(m => `<div class="step"><div class="num">PDF</div><div><strong>${m.label} report</strong><div class="muted">Human review report generated from the import package.</div></div><a class="btn primary" href="${m.summary.pdf_report}" target="_blank">Open PDF</a></div><div class="step"><div class="num">XLSX</div><div><strong>${m.label} generated review workbook</strong><div class="muted">Structured workbook with transactions, mappings, validation results, and review queue.</div></div><a class="btn" href="${reviewWorkbookPath(m.period)}" target="_blank">Open workbook</a></div>`).join('');
+  document.getElementById('reports').innerHTML = `<div class="card"><h2>Reports and source evidence files</h2><p class="muted">These generated files support manual checking. The production version will also open the private original Excel workbook from secure storage.</p><div class="timeline">${links}</div></div>`;
 }
 
+
+function monthByPeriod(period) { return DATA.months.find(m => m.period === period); }
+function periodSlug(period) {
+  if (period === '2020-03') return 'March';
+  if (period === '2020-04') return 'April';
+  if (period === '2020-05') return 'May';
+  return period || 'Period';
+}
+function reviewWorkbookPath(period) {
+  const m = periodSlug(period);
+  return `/review-workbooks/University_${m}_2020_Import_Review_Workbook.xlsx`;
+}
+function reportPdfPath(period) { return monthByPeriod(period)?.summary?.pdf_report || '#'; }
+function openLink(path) { window.open(path, '_blank', 'noopener'); }
+function sourceRowNumberFromRef(ref) {
+  const r = String(ref || '');
+  const m1 = r.match(/row\s*(\d+)/i);
+  if (m1) return Number(m1[1]);
+  const m2 = r.match(/[A-Z]+(\d+)\s*:/i) || r.match(/[A-Z]+(\d+)/i);
+  if (m2) return Number(m2[1]);
+  return null;
+}
+function sourceSheetFromRef(ref) {
+  const r = String(ref || '');
+  if (!r) return '';
+  return r.split('!')[0].replace(/,$/, '').trim();
+}
+function monthTransactions(period) { return (monthByPeriod(period)?.transactions || []); }
+function evidenceTransactionRows(i, tx) {
+  const period = i.period;
+  const out = [];
+  if (tx) out.push(tx);
+  const ref = i.source_reference || tx?.source_reference || '';
+  const sheet = tx?.source_sheet || sourceSheetFromRef(ref);
+  const row = Number(tx?.source_row || sourceRowNumberFromRef(ref) || 0);
+  if (sheet && row) {
+    monthTransactions(period).forEach(t => {
+      if (String(t.source_sheet || '') === String(sheet) && Math.abs(Number(t.source_row || 0) - row) <= 3) out.push(t);
+    });
+  }
+  const text = `${i.description || ''} ${i.details || ''} ${i.suggested_action || ''}`;
+  const re = /(\d{2}\.\d{2}\.\d{4}\.?)[^\d]{0,40}row\s*(\d+)/gi;
+  let m;
+  while ((m = re.exec(text))) {
+    const mentionedSheet = m[1];
+    const mentionedRow = Number(m[2]);
+    monthTransactions(period).forEach(t => {
+      if (String(t.source_sheet || '').includes(mentionedSheet) && Math.abs(Number(t.source_row || 0) - mentionedRow) <= 3) out.push(t);
+    });
+  }
+  const seen = new Set();
+  return out.filter(t => {
+    const k = t.transaction_id || `${t.source_reference}-${t.source_row}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).sort((a,b) => String(a.source_sheet).localeCompare(String(b.source_sheet)) || Number(a.source_row||0)-Number(b.source_row||0)).slice(0, 18);
+}
+function linkedValidationRows(i) {
+  const period = i.period;
+  const rows = [];
+  const direct = valById(i.related_object_id);
+  if (direct) rows.push(direct);
+  const txt = `${i.related_object_id || ''} ${i.description || ''} ${i.details || ''}`;
+  (monthByPeriod(period)?.validation_results || []).forEach(v => {
+    if (txt.includes(v.validation_id) || txt.toLowerCase().includes(String(v.check_name || '').toLowerCase())) rows.push(v);
+  });
+  const seen = new Set();
+  return rows.filter(v => { const k = v.validation_id || v.check_name; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 10);
+}
+function monthlyStatusEvidence(i) {
+  const m = monthByPeriod(i.period);
+  const all = m?.monthly_status_summary || [];
+  if (!all.length) return [];
+  const row = sourceRowNumberFromRef(i.source_reference);
+  if (row) return all.filter(x => Number(x.source_row || x.source_row_number || 0) === row).slice(0, 8);
+  const needle = `${i.description || ''} ${i.details || ''}`.toLowerCase();
+  const matched = all.filter(x => needle.includes(String(x.label || x.monthly_label || '').toLowerCase())).slice(0, 8);
+  return matched.length ? matched : all.filter(x => Number(x.total_rsd_equivalent || x.amount_rsd_equivalent || 0) !== 0).slice(0, 8);
+}
+function objectRows(obj, preferred = []) {
+  if (!obj) return '';
+  const keys = preferred.concat(Object.keys(obj).filter(k => !preferred.includes(k))).filter(k => obj[k] !== undefined && obj[k] !== null && String(obj[k]) !== '');
+  return keys.map(k => `<tr><td class="mini">${esc(k)}</td><td>${esc(obj[k])}</td></tr>`).join('');
+}
+function sourceEvidencePanel(i, tx) {
+  const effective = tx ? effTx(tx) : null;
+  const txRows = evidenceTransactionRows(i, tx);
+  const valRows = linkedValidationRows(i);
+  const monthlyRows = monthlyStatusEvidence(i);
+  const m = monthByPeriod(i.period);
+  const dailyRows = (m?.daily_balances || []).filter(d => {
+    const sheet = tx?.source_sheet || sourceSheetFromRef(i.source_reference || '');
+    return sheet ? String(d.source_sheet || '').includes(sheet) : false;
+  }).slice(0, 4);
+  const txTableRows = txRows.map(t => `<tr><td>${esc(t.source_sheet)}</td><td>${esc(t.source_row)}</td><td>${esc(t.transaction_id)}</td><td>${esc(t.direction)}</td><td>${esc(t.payment_method)}</td><td>${money(t.amount_rsd_equivalent)}</td><td>${esc(t.raw_category)}</td><td>${esc(t.suggested_category)}</td><td>${esc(t.description)}</td></tr>`);
+  const valTableRows = valRows.map(v => `<tr><td>${esc(v.validation_id || '')}</td><td>${esc(v.check_name)}</td><td>${pill(v.status)}</td><td>${esc(v.severity)}</td><td>${esc(v.expected_value)}</td><td>${esc(v.actual_value)}</td><td>${esc(v.difference)}</td><td>${esc(v.explanation)}</td></tr>`);
+  const monRows = monthlyRows.map(r => `<tr><td>${esc(r.source_sheet || 'Mesecni promet')}</td><td>${esc(r.source_row || r.source_row_number || '')}</td><td>${esc(r.side || '')}</td><td>${esc(r.label || r.monthly_label || '')}</td><td>${money(r.total_rsd_equivalent ?? r.amount_rsd_equivalent)}</td><td>${esc(r.cash_rsd ?? '')}</td><td>${esc(r.bank_rsd ?? '')}</td></tr>`);
+  const dailyTableRows = dailyRows.map(r => `<tr><td>${esc(r.date)}</td><td>${esc(r.source_sheet)}</td><td>${money(r.opening_total)}</td><td>${money(r.inflows_total)}</td><td>${money(r.outflows_total)}</td><td>${money(r.closing_total)}</td><td>${pill(r.status)}</td></tr>`);
+  const normalizedBlock = effective
+    ? `<details open><summary>Data our app created from the source row</summary><table><tbody>${objectRows(effective, ['transaction_id','date','direction','payment_method','currency_original','amount_rsd_equivalent','raw_category','suggested_category','report_group','counterparty','counterparty_type','description','source_reference','source_sheet','source_row','confidence','review_status'])}</tbody></table></details>`
+    : `<details open><summary>Data our app created for this control issue</summary><table><tbody>${objectRows(valRows[0] || i, ['validation_id','check_name','status','severity','expected_value','actual_value','difference','explanation','review_item_id','issue_type','description','details','suggested_action','source_reference'])}</tbody></table></details>`;
+  return `<div class="source-box evidence-box"><h3>Source evidence viewer</h3>
+    <p class="muted">Use this section to compare the original source reference against the normalized data our app created. The demo uses anonymized/generated review workbooks and PDF reports; the production app will open the private original Excel file from secure storage.</p>
+    <div class="toolbar">
+      <button class="btn primary" onclick="openLink('${esc(reportPdfPath(i.period))}')">Open PDF review report</button>
+      <button class="btn" onclick="openLink('${esc(reviewWorkbookPath(i.period))}')">Open generated review workbook</button>
+      <span class="mini">Exact source: ${esc(i.source_reference || effective?.source_reference || 'Workbook/monthly control issue')}</span>
+    </div>
+    ${normalizedBlock}
+    ${txTableRows.length ? `<details open><summary>Original Excel row context / nearby extracted rows</summary>${table(['Sheet','Row','Transaction ID','Direction','Method','Amount','Raw category','Mapped category','Description'], txTableRows)}</details>` : '<div class="notice">No direct transaction row was linked. Use the validation/control evidence below and the workbook/report buttons above.</div>'}
+    ${valTableRows.length ? `<details open><summary>Linked validation/control evidence</summary>${table(['ID','Check','Status','Severity','Expected','Actual','Difference','Explanation'], valTableRows)}</details>` : ''}
+    ${monRows.length ? `<details><summary>Mesecni promet / monthly status evidence</summary>${table(['Sheet','Row','Side','Label','Total RSD equivalent','Cash RSD','Bank RSD'], monRows)}</details>` : ''}
+    ${dailyTableRows.length ? `<details><summary>Daily balance tie-out for the same sheet</summary>${table(['Date','Sheet','Opening','Inflows','Outflows','Closing','Status'], dailyTableRows)}</details>` : ''}
+  </div>`;
+}
+
+
+function smallObjRows(obj, preferred = []) {
+  if (!obj) return '<div class="mini">No data available.</div>';
+  const keys = preferred.length ? preferred.filter(k => obj[k] !== undefined && obj[k] !== null && obj[k] !== '') : Object.keys(obj).slice(0, 16);
+  if (!keys.length) return '<div class="mini">No populated fields available.</div>';
+  return table(['Field', 'Value'], keys.map(k => `<tr><td class="mini">${esc(k)}</td><td>${esc(obj[k])}</td></tr>`));
+}
+function evidenceTxTable(rows, title = 'Rows') {
+  if (!rows || !rows.length) return `<div class="source-box"><h3>${esc(title)}</h3><div class="mini">No related rows found in the generated import package.</div></div>`;
+  const body = rows.map(t => `<tr><td>${esc(t.source_sheet || '')}</td><td>${esc(t.source_row || '')}</td><td>${esc(t.date || '')}</td><td>${pill(t.direction || '')}</td><td>${esc(t.payment_method || '')}</td><td>${money(t.amount_rsd_equivalent)}</td><td>${esc(t.raw_category || '')}</td><td>${esc(t.suggested_category || '')}</td><td>${esc(t.description || '')}</td><td>${esc(t.transaction_id || '')}</td></tr>`);
+  return `<div class="source-box"><h3>${esc(title)}</h3>${table(['Sheet','Row','Date','Direction','Method','Amount','Raw category','Mapped category','Description','Transaction ID'], body)}</div>`;
+}
+function monthlyEvidenceTable(rows) {
+  if (!rows || !rows.length) return '<div class="mini">No monthly status rows available for this issue.</div>';
+  const body = rows.map(r => {
+    const rowNo = r.source_row ?? r.source_row_number ?? '';
+    const label = r.label ?? r.monthly_label ?? '';
+    const amount = r.total_rsd_equivalent ?? r.amount_rsd_equivalent ?? '';
+    return `<tr><td>${esc(rowNo)}</td><td>${esc(r.side || '')}</td><td>${esc(label)}</td><td>${esc(r.cash_rsd ?? '')}</td><td>${esc(r.cash_eur_converted_rsd ?? r.cash_eur ?? '')}</td><td>${esc(r.bank_rsd ?? '')}</td><td>${esc(r.bank_eur_converted_rsd ?? r.bank_eur ?? '')}</td><td>${money(amount || 0)}</td></tr>`;
+  });
+  return table(['Row','Side','Monthly label','Cash RSD','Cash EUR/RSD','Bank RSD','Bank EUR/RSD','Total RSD eq.'], body);
+}
+function evidencePanel(i, tx) {
+  const ev = SOURCE_EVIDENCE[i.review_item_id] || {};
+  const wb = ev.original_workbook || {};
+  const parsed = ev.source_reference_parsed || {};
+  const linkedTx = ev.linked_transaction || tx || null;
+  const linkedVal = ev.linked_validation || valById(i.related_object_id) || null;
+  const sourceContexts = ev.source_context?.sheet_contexts || [];
+  const sameCat = ev.source_context?.same_category_transactions || [];
+  const dailyRows = ev.daily_balance_context || [];
+  const monthlyRows = ev.monthly_status_context || [];
+  const firstSourceRows = sourceContexts.map((ctx, idx) => evidenceTxTable(ctx.nearby_transactions, `Original Excel row context ${idx + 1}: ${ctx.reference?.sheet || ''}${ctx.reference?.row ? ' around row ' + ctx.reference.row : ''}`)).join('');
+  const dailyTable = dailyRows.length ? table(['Date','Sheet','Opening','Inflows','Outflows','Closing','Status'], dailyRows.map(r => `<tr><td>${esc(r.date)}</td><td>${esc(r.source_sheet)}</td><td>${money(r.opening_total)}</td><td>${money(r.inflows_total)}</td><td>${money(r.outflows_total)}</td><td>${money(r.closing_total)}</td><td>${pill(r.status || '')}</td></tr>`)) : '<div class="mini">No daily balance control row found for this source sheet.</div>';
+  return `<div class="evidence-panel">
+    <h3>Source evidence viewer</h3>
+    <div class="notice evidence-note"><strong>Purpose:</strong> compare the original workbook reference, the extracted/normalized row, and the generated review documents before making a decision. In production, this panel will open the secured original Excel file directly. In this Railway demo, the raw workbook is not bundled publicly; the exact workbook/sheet/row reference and extracted source rows are shown instead.</div>
+    <div class="evidence-grid">
+      <div class="source-box"><h3>1. Original workbook reference</h3>
+        <strong>Original workbook:</strong> ${esc(wb.original_workbook_name || 'Company source workbook')}<br>
+        <strong>Month:</strong> ${esc(ev.month_label || i.period)}<br>
+        <strong>Source reference:</strong> ${esc(i.source_reference || 'Workbook/monthly control')}<br>
+        <strong>Parsed sheet:</strong> ${esc(parsed.sheet || '')}<br>
+        <strong>Parsed row/cell:</strong> ${esc(parsed.row || parsed.cell || '')}<br>
+        <div class="toolbar evidence-actions"><a class="btn primary" href="${esc(wb.pdf_report || '#')}" target="_blank">Open PDF report</a><a class="btn" href="${esc(wb.review_workbook || '#')}" target="_blank">Download review workbook</a></div>
+      </div>
+      <div class="source-box"><h3>2. Review item created by app</h3>${smallObjRows(i, ['review_item_id','period','severity','issue_type','description','details','suggested_action','related_object_id','source_reference'])}</div>
+    </div>
+    ${linkedTx ? `<div class="source-box"><h3>3. Normalized transaction created by app</h3>${smallObjRows(linkedTx, ['transaction_id','date','direction','payment_method','currency_original','amount_rsd_equivalent','raw_category','suggested_category','report_group','counterparty','counterparty_type','description','source_sheet','source_row','confidence','review_status'])}</div>` : ''}
+    ${linkedVal ? `<div class="source-box"><h3>3. Validation/control record created by app</h3>${smallObjRows(linkedVal, ['validation_id','check_name','status','severity','expected_value','actual_value','difference','explanation','action_required'])}</div>` : ''}
+    ${firstSourceRows || '<div class="source-box"><h3>Original Excel row context</h3><div class="mini">No direct row context was found. This usually happens for workbook-level validation/control issues. Use the monthly status and validation sections below.</div></div>'}
+    <div class="source-box"><h3>Daily balance control for referenced sheet</h3>${dailyTable}</div>
+    <div class="source-box"><h3>Monthly status rows from generated review document</h3>${monthlyEvidenceTable(monthlyRows)}</div>
+    ${evidenceTxTable(sameCat, 'Same-category transactions sorted from generated import data')}
+  </div>`;
+}
 function openModal(id) {
   currentId = id;
   const i = itemById(id), tx = txById(i.related_object_id), t = taskFor(id), d = STATE.decisions[id];
   document.getElementById('modalTitle').textContent = `${role() === 'owner' ? 'Owner task' : 'Review item'}: ${id}`;
   document.getElementById('modalSubtitle').innerHTML = `${esc(i.period)} • ${pill(i.severity)} ${pill(generalIssueType(i), 'purple')} ${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}`;
   const taskBlock = t ? `<div class="source-box"><h3>Owner clarification task</h3><strong>Question:</strong> ${esc(t.question || '')}<br><strong>Status:</strong> ${pill(t.status)}<br><strong>Owner answer:</strong> ${esc(t.owner_answer || '')}</div>` : '';
-  const source = `<div class="source-box"><h3>Issue and source evidence</h3><strong>Description:</strong> ${esc(i.description)}<br><strong>Details:</strong> ${esc(i.details || '')}<br><strong>Suggested action:</strong> ${esc(i.suggested_action || '')}<br><strong>Source:</strong> ${esc(i.source_reference || 'Workbook/control issue')}<br><strong>Related object:</strong> ${esc(i.related_object_id || '')}</div>`;
+  const source = evidencePanel(i, tx) + `<div class="source-box"><h3>Issue summary</h3><strong>Description:</strong> ${esc(i.description)}<br><strong>Details:</strong> ${esc(i.details || '')}<br><strong>Suggested action:</strong> ${esc(i.suggested_action || '')}<br><strong>Source:</strong> ${esc(i.source_reference || 'Workbook/control issue')}<br><strong>Related object:</strong> ${esc(i.related_object_id || '')}</div>`;
+  const evidence = sourceEvidencePanel(i, tx);
   const editable = tx ? transactionForm(i, tx) : controlForm(i);
   const roleFields = role() === 'accountant'
     ? `<div class="field-grid"><div class="field"><label>Reviewer / accountant name</label><input id="reviewerName" value="${esc(d?.reviewer || 'Accountant Reviewer')}"></div><div class="field"><label>Question to owner, if clarification is needed</label><input id="ownerQuestion" value="${esc(t?.question || '')}" placeholder="Example: Was this legal cost, loan repayment, or owner withdrawal?"></div><div class="field" style="grid-column:1/-1"><label>Review note / accountant explanation</label><textarea id="reviewNote">${esc(d?.note || '')}</textarea></div></div>`
     : `<div class="field-grid"><div class="field"><label>Owner name</label><input id="reviewerName" value="${esc(d?.reviewer || 'Business Owner')}"></div><div class="field" style="grid-column:1/-1"><label>Owner answer / business context</label><textarea id="reviewNote" placeholder="Give business context. You do not need to make a final accounting judgment.">${esc(t?.owner_answer || d?.note || '')}</textarea></div></div>`;
   const buttons = role() === 'accountant' ? accountantButtons() : ownerButtons();
-  document.getElementById('modalBody').innerHTML = `${taskBlock}${source}<div class="divider"></div>${editable}<div class="divider"></div>${roleFields}<div class="actions modal-actions">${buttons}</div><div class="mini">Current demo stores this decision in browser localStorage. Export your package before clearing browser data.</div>`;
+  document.getElementById('modalBody').innerHTML = `${taskBlock}${source}${evidence}<div class="divider"></div>${editable}<div class="divider"></div>${roleFields}<div class="actions modal-actions">${buttons}</div><div class="mini">Current demo stores this decision in browser localStorage. Export your package before clearing browser data.</div>`;
   document.getElementById('reviewModal').classList.add('open');
 }
 function transactionForm(i, tx) {
@@ -665,10 +892,10 @@ function certifyMonthAccountant() {
 }
 
 function exportObj() {
-  return { exported_at: now(), app: 'Ask Your Business Simplified Owner + Accountant Operations Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+  return { exported_at: now(), app: 'Ask Your Business Source Evidence Review Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
 }
 function accountantPackObj() {
-  return { exported_at: now(), pack_type: 'Accountant Review Pack', version: APP_VERSION, company_code: DATA.company_code, selected_scope: selected, purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+  return { exported_at: now(), pack_type: 'Accountant Operations Review Pack', version: APP_VERSION, company_code: DATA.company_code, selected_scope: selected, purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
 }
 function download(name, obj) { const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
 function exportPackage() { download(`certified_import_package_${new Date().toISOString().slice(0, 10)}.json`, exportObj()); }
@@ -676,6 +903,9 @@ function exportAccountantPack() { download(`accountant_review_pack_${new Date().
 function exportState() { download(`review_decisions_${new Date().toISOString().slice(0, 10)}.json`, STATE); }
 function resetProgress() { if (confirm('Reset all local decisions, edits, clarification tasks, and batch statuses in this browser?')) { STATE = blankState(); saveState(); renderAll(); } }
 
+window.openLink = openLink;
+window.bulkMarkLowRiskManagementReady = bulkMarkLowRiskManagementReady;
+window.sendVisibleOwnerQuestions = sendVisibleOwnerQuestions;
 window.setRole = setRole;
 window.setActiveSection = setActiveSection;
 window.openModal = openModal;
@@ -687,17 +917,18 @@ window.exportState = exportState;
 window.resetProgress = resetProgress;
 window.markMonthManagementReady = markMonthManagementReady;
 window.certifyMonthAccountant = certifyMonthAccountant;
-window.setReviewFilter = setReviewFilter;
-window.bulkSetFiltered = bulkSetFiltered;
 window.ask = ask;
 window.renderReviewTable = renderReviewTable;
 window.renderTxTable = renderTxTable;
 
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => setActiveSection(b.dataset.section));
-fetch('/data/university_mar_apr_may_import_data.json')
-  .then(r => r.json())
-  .then(d => {
+Promise.all([
+  fetch('/data/university_mar_apr_may_import_data.json').then(r => r.json()),
+  fetch('/data/source_evidence_lookup.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+])
+  .then(([d, evidence]) => {
     DATA = d;
+    SOURCE_EVIDENCE = evidence || {};
     loadState();
     const sel = document.getElementById('monthSelect');
     sel.innerHTML = '<option value="ALL">All months combined</option>' + d.months.map(m => `<option value="${m.period}">${m.label}</option>`).join('');
