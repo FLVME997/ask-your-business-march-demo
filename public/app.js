@@ -1,95 +1,708 @@
-let DATA, selected='ALL', currentId=null;
-let REVIEW_UI={q:'',status:'needs_review',severity:'',area:'',scrollTop:0,scrollLeft:0};
-const LS_KEY='ayb_review_center_v2';
-let STATE={decisions:{},txOverrides:{},controlOverrides:{},manualAdjustments:{},mappingRules:[],batchCertifications:{}};
-const fmt=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const money=n=>`${fmt.format(Number(n||0))} RSD`;
-const esc=x=>String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const now=()=>new Date().toISOString();
-function cls(s){s=String(s||'').toLowerCase();if(s.includes('cert')||s.includes('pass')||s==='inflow')return'good';if(s.includes('reject')||s.includes('fail')||s.includes('high'))return'bad';if(s.includes('review')||s.includes('open')||s.includes('warn')||s.includes('medium')||s==='outflow'||s.includes('escal'))return'warn';if(s.includes('edited')||s.includes('map'))return'purple';return'info'}
-function pill(t,k){return `<span class="pill ${k||cls(t)}">${esc(t)}</span>`}
-function table(h,rows){return `<div class="table-wrap"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`}
-function loadState(){try{const raw=localStorage.getItem(LS_KEY);if(raw)STATE={decisions:{},txOverrides:{},controlOverrides:{},manualAdjustments:{},mappingRules:[],batchCertifications:{},...JSON.parse(raw)}}catch(e){console.warn(e)}}
-function saveState(){localStorage.setItem(LS_KEY,JSON.stringify(STATE))}
-function blankState(){return {decisions:{},txOverrides:{},controlOverrides:{},manualAdjustments:{},mappingRules:[],batchCertifications:{}}}
-function month(){return DATA.months.find(m=>m.period===selected)}
-function label(){return selected==='ALL'?'All months':month().label}
-function scopeMonths(){return selected==='ALL'?DATA.months:[month()]}
-function allItems(){return DATA.months.flatMap(m=>m.manual_review_queue.map(r=>({...r,month_label:m.label})))}
-function allTx(){return DATA.months.flatMap(m=>m.transactions.map(t=>({...t,month_label:m.label})))}
-function itemById(id){return allItems().find(i=>i.review_item_id===id)}
-function txById(id){return allTx().find(t=>t.transaction_id===id)}
-function valById(id){return DATA.months.flatMap(m=>m.validation_results).find(v=>v.validation_id===id)}
-function itemStatus(i){return STATE.decisions[i.review_item_id]?.status || (String(i.status||'open').toLowerCase()==='open'?'needs_review':String(i.status||'needs_review').toLowerCase())}
-function statusLabel(s){return ({needs_review:'Needs review',in_review:'In review',certified:'Certified',edited_certified:'Edited + certified',rejected:'Rejected',escalated:'Escalated'})[s]||s}
-function isResolved(i){return ['certified','edited_certified','rejected','escalated'].includes(itemStatus(i))}
-function blocks(i){return ['needs_review','in_review','escalated'].includes(itemStatus(i))}
-function scopeItems(){return selected==='ALL'?allItems():allItems().filter(i=>i.period===selected)}
-function activeSection(){return document.querySelector('.section.active')?.id||'overview'}
-function setActiveSection(id){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.section===id));document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id===id))}
-function captureReviewUI(){
-  const q=document.getElementById('rq'),rs=document.getElementById('rs'),rv=document.getElementById('rv'),ra=document.getElementById('ra'),wrap=document.querySelector('#reviewTable .table-wrap');
-  if(q)REVIEW_UI.q=q.value||'';
-  if(rs)REVIEW_UI.status=rs.value||'';
-  if(rv)REVIEW_UI.severity=rv.value||'';
-  if(ra)REVIEW_UI.area=ra.value||'';
-  if(wrap){REVIEW_UI.scrollTop=wrap.scrollTop||0;REVIEW_UI.scrollLeft=wrap.scrollLeft||0;}
+let DATA;
+let selected = 'ALL';
+let currentId = null;
+let REVIEW_UI = { q: '', status: 'needs_review', severity: '', area: '', scrollTop: 0, scrollLeft: 0 };
+const LS_KEY = 'ayb_owner_accountant_operations_v07';
+const APP_VERSION = '0.7.0';
+
+let STATE = blankState();
+
+const fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = n => `${fmt.format(Number(n || 0))} RSD`;
+const esc = x => String(x ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const now = () => new Date().toISOString();
+
+const STATUS_META = {
+  needs_review: { label: 'Needs review', tone: 'warn' },
+  in_review: { label: 'In review', tone: 'warn' },
+  owner_reviewed: { label: 'Owner reviewed', tone: 'info' },
+  management_ready: { label: 'Management-ready', tone: 'purple' },
+  needs_owner_clarification: { label: 'Needs owner clarification', tone: 'warn' },
+  needs_accountant_review: { label: 'Needs accountant review', tone: 'warn' },
+  accountant_certified: { label: 'Accountant-certified', tone: 'good' },
+  rejected: { label: 'Rejected / excluded', tone: 'bad' },
+  escalated: { label: 'Escalated', tone: 'bad' }
+};
+
+function blankState() {
+  return {
+    role: 'owner',
+    decisions: {},
+    txOverrides: {},
+    controlOverrides: {},
+    manualAdjustments: {},
+    mappingRules: [],
+    batchStatuses: {},
+    clarificationTasks: {},
+    auditEvents: []
+  };
 }
-function itemMatchesReviewUI(i){
-  const q=String(REVIEW_UI.q||'').toLowerCase(),sf=REVIEW_UI.status||'',vf=REVIEW_UI.severity||'',af=REVIEW_UI.area||'';
-  if(sf&&itemStatus(i)!==sf)return false;
-  if(vf&&i.severity!==vf)return false;
-  if(af&&generalIssueType(i)!==af)return false;
-  if(q&&!JSON.stringify(i).toLowerCase().includes(q)&&!JSON.stringify(STATE.decisions[i.review_item_id]||{}).toLowerCase().includes(q)&&!JSON.stringify(STATE.controlOverrides[i.review_item_id]||{}).toLowerCase().includes(q))return false;
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) STATE = { ...blankState(), ...JSON.parse(raw) };
+  } catch (e) { console.warn(e); }
+}
+function saveState() { localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
+
+function cls(s) {
+  s = String(s || '').toLowerCase();
+  if (s.includes('accountant-certified') || s.includes('cert') || s.includes('pass') || s === 'inflow' || s.includes('ready')) return 'good';
+  if (s.includes('reject') || s.includes('fail') || s.includes('high') || s.includes('escal')) return 'bad';
+  if (s.includes('review') || s.includes('open') || s.includes('warn') || s.includes('medium') || s === 'outflow' || s.includes('pending') || s.includes('clarification')) return 'warn';
+  if (s.includes('edited') || s.includes('map') || s.includes('management')) return 'purple';
+  return 'info';
+}
+function pill(t, k) { return `<span class="pill ${k || cls(t)}">${esc(t)}</span>`; }
+function table(h, rows) { return `<div class="table-wrap"><table><thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`; }
+function actionBtn(label, js, klass = '') { return `<button class="btn ${klass}" onclick="${js}">${esc(label)}</button>`; }
+
+function role() { return STATE.role || 'owner'; }
+function setRole(r) {
+  STATE.role = r;
+  saveState();
+  renderAll();
+  setActiveSection(r === 'owner' ? 'owner' : 'accountant');
+}
+function allowedTabs() {
+  if (role() === 'owner') return ['owner', 'shared', 'assistant', 'reports'];
+  return ['accountant', 'review', 'transactions', 'mapping', 'validation', 'certification', 'shared', 'reports'];
+}
+function activeSection() { return document.querySelector('.section.active')?.id || (role() === 'owner' ? 'owner' : 'accountant'); }
+function setActiveSection(id) {
+  const allowed = allowedTabs();
+  if (!allowed.includes(id)) id = role() === 'owner' ? 'owner' : 'accountant';
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.section === id));
+  document.querySelectorAll('.section').forEach(x => x.classList.toggle('active', x.id === id));
+}
+
+function month() { return DATA.months.find(m => m.period === selected); }
+function label() { return selected === 'ALL' ? 'All months' : month().label; }
+function scopeMonths() { return selected === 'ALL' ? DATA.months : [month()]; }
+function allItems() { return DATA.months.flatMap(m => m.manual_review_queue.map(r => ({ ...r, month_label: m.label }))); }
+function allTx() { return DATA.months.flatMap(m => m.transactions.map(t => ({ ...t, month_label: m.label }))); }
+function itemById(id) { return allItems().find(i => i.review_item_id === id); }
+function txById(id) { return allTx().find(t => t.transaction_id === id); }
+function valById(id) { return DATA.months.flatMap(m => m.validation_results).find(v => v.validation_id === id); }
+function scopeItems() { return selected === 'ALL' ? allItems() : allItems().filter(i => i.period === selected); }
+
+function itemStatus(i) {
+  const s = STATE.decisions[i.review_item_id]?.status || String(i.status || 'open').toLowerCase();
+  return s === 'open' ? 'needs_review' : s;
+}
+function statusLabel(s) { return STATUS_META[s]?.label || String(s || 'Unknown'); }
+function isDoneForQueue(i) { return ['management_ready', 'accountant_certified', 'rejected'].includes(itemStatus(i)); }
+function blocksManagement(i) { return ['needs_review', 'in_review', 'needs_owner_clarification', 'escalated'].includes(itemStatus(i)); }
+function blocksFormal(i) { return !['accountant_certified', 'rejected'].includes(itemStatus(i)); }
+function openOwnerClarification(i) { return itemStatus(i) === 'needs_owner_clarification'; }
+function needsAccountantWork(i) { return ['needs_review', 'in_review', 'owner_reviewed', 'needs_accountant_review', 'needs_owner_clarification', 'management_ready', 'escalated'].includes(itemStatus(i)); }
+
+function generalIssueType(i) {
+  const raw = `${i.issue_type || ''} ${i.description || ''} ${i.details || ''}`.toLowerCase();
+  if (raw.includes('formula') || raw.includes('validation') || raw.includes('monthly') || raw.includes('tie-out') || raw.includes('tie_out') || String(i.related_object_id || '').startsWith('VAL')) return 'Validation / control';
+  if (raw.includes('mapping') || raw.includes('new_category') || raw.includes('new category') || raw.includes('category') || raw.includes('confidence')) return 'Mapping / category';
+  if (raw.includes('transaction') || raw.includes('large') || raw.includes('amount') || raw.includes('eur') || raw.includes('non_operating') || raw.includes('non-operating')) return 'Transaction review';
+  if (raw.includes('sheet') || raw.includes('template') || raw.includes('naming') || raw.includes('source') || raw.includes('file')) return 'Source structure';
+  return 'Other';
+}
+function generalOptions(v = '') { return ['Validation / control', 'Mapping / category', 'Transaction review', 'Source structure', 'Other'].map(o => `<option value="${esc(o)}" ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join(''); }
+
+function stats(period = selected) {
+  const items = period === 'ALL' ? allItems() : allItems().filter(i => i.period === period);
+  const out = { total: items.length, management_blocking: 0, formal_blocking: 0, owner_clarifications: 0, accountant_pending: 0 };
+  Object.keys(STATUS_META).forEach(k => out[k] = 0);
+  items.forEach(i => {
+    const s = itemStatus(i);
+    out[s] = (out[s] || 0) + 1;
+    if (blocksManagement(i)) out.management_blocking += 1;
+    if (blocksFormal(i)) out.formal_blocking += 1;
+    if (openOwnerClarification(i)) out.owner_clarifications += 1;
+    if (needsAccountantWork(i)) out.accountant_pending += 1;
+  });
+  out.resolved_for_management = out.total - out.management_blocking;
+  out.resolved_for_formal = out.total - out.formal_blocking;
+  return out;
+}
+function baseQuality(period = selected) {
+  if (period === 'ALL') return Number(DATA.portfolio_summary.average_data_quality_score || 0);
+  return Number(DATA.months.find(m => m.period === period).summary.data_quality_score || 0);
+}
+function localQuality(period = selected) {
+  const st = stats(period), base = baseQuality(period);
+  return st.total ? Math.min(100, base + (100 - base) * (st.resolved_for_management / st.total)) : base;
+}
+function managementStatus(period = selected) {
+  const st = stats(period), bs = batchStatus(period);
+  if (period !== 'ALL' && bs.accountant_certified) return { label: 'Accountant-certified', tone: 'good', detail: 'Ready for formal reports and owner dashboards.' };
+  if (period !== 'ALL' && bs.management_ready) return { label: 'Management-ready', tone: 'purple', detail: 'Usable for owner management dashboards with accountant-certification limitation.' };
+  if (st.management_blocking === 0) return { label: 'Ready for management review', tone: 'purple', detail: 'No management blockers remain, but period has not been marked management-ready yet.' };
+  return { label: 'Needs review before management use', tone: 'warn', detail: `${st.management_blocking} item(s) still block management-ready status.` };
+}
+function formalStatus(period = selected) {
+  const st = stats(period), bs = batchStatus(period);
+  if (period !== 'ALL' && bs.accountant_certified) return { label: 'Accountant-certified', tone: 'good', detail: 'Formal accountant certification recorded.' };
+  if (st.formal_blocking === 0) return { label: 'Ready for accountant certification', tone: 'purple', detail: 'All non-rejected items are accountant-certified; batch certification can be recorded.' };
+  return { label: 'Accountant certification pending', tone: 'warn', detail: `${st.formal_blocking} item(s) still need accountant-level certification or exclusion.` };
+}
+function batchStatus(period) { return STATE.batchStatuses[period] || {}; }
+
+function mappingFor(t) {
+  return [...(STATE.mappingRules || [])].reverse().find(r => (!r.period || r.period === 'ALL' || r.period === t.period) && r.direction === t.direction && String(r.raw_category) === String(t.raw_category));
+}
+function effTx(t) {
+  let out = { ...t };
+  const rule = mappingFor(out);
+  if (rule && !STATE.txOverrides[out.transaction_id]?.suggested_category) {
+    out.suggested_category = rule.suggested_category;
+    out.report_group = rule.report_group || out.report_group;
+    out.mapping_rule_applied = rule.mapping_rule_id;
+  }
+  if (STATE.txOverrides[out.transaction_id]) out = { ...out, ...STATE.txOverrides[out.transaction_id] };
+  return out;
+}
+function manualAdjustmentRows(period = selected) {
+  return Object.values(STATE.manualAdjustments || {}).filter(a => period === 'ALL' || a.period === period).filter(a => {
+    const d = STATE.decisions[a.review_item_id];
+    return d && !['rejected', 'escalated'].includes(d.status) && !a.excluded;
+  });
+}
+function displayTxRows(period = selected) {
+  const months = period === 'ALL' ? DATA.months : [DATA.months.find(m => m.period === period)];
+  return [...months.flatMap(m => m.transactions.map(effTx)), ...manualAdjustmentRows(period)];
+}
+function adjSummary(period = selected) {
+  const months = period === 'ALL' ? DATA.months : [DATA.months.find(m => m.period === period)];
+  const tx = displayTxRows(period).filter(t => !t.excluded);
+  const inflows = tx.filter(t => t.direction === 'inflow').reduce((a, t) => a + Number(t.amount_rsd_equivalent || 0), 0);
+  const outflows = tx.filter(t => t.direction === 'outflow').reduce((a, t) => a + Number(t.amount_rsd_equivalent || 0), 0);
+  const opening = period === 'ALL' ? DATA.portfolio_summary.opening_position : months[0].summary.opening_position;
+  return { opening, inflows, outflows, net: inflows - outflows, closing: Number(opening || 0) + inflows - outflows, rows: tx.length };
+}
+
+function taskFor(id) { return STATE.clarificationTasks[id] || null; }
+function openTasks(period = selected) {
+  return Object.values(STATE.clarificationTasks || {}).filter(t => (period === 'ALL' || t.period === period) && t.status !== 'closed');
+}
+function audit(action, payload = {}) { STATE.auditEvents.push({ at: now(), action, ...payload }); }
+
+function renderAll() {
+  document.getElementById('badge').textContent = `${DATA.company_code} • v${APP_VERSION}`;
+  renderRoleBar();
+  renderTabs();
+  renderOwnerPortal();
+  renderAccountantWorkbench();
+  renderShared();
+  renderReview();
+  renderTx();
+  renderMapping();
+  renderValidation();
+  renderCert();
+  renderAssistant();
+  renderReports();
+  if (!allowedTabs().includes(activeSection())) setActiveSection(role() === 'owner' ? 'owner' : 'accountant');
+}
+function renderRoleBar() {
+  document.getElementById('roleLabel').textContent = role() === 'owner' ? 'Owner Portal' : 'Accountant Workbench';
+  document.getElementById('roleExplain').textContent = role() === 'owner'
+    ? 'Owner sees clean business visibility, tasks to answer, management-ready warnings, and assistant answers with limitations.'
+    : 'Accountant team handles intake alignment, mapping, validation, owner questions, and certification controls.';
+  document.querySelectorAll('.rolebtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.role === role());
+    b.onclick = () => setRole(b.dataset.role);
+  });
+}
+function renderTabs() {
+  const allowed = allowedTabs();
+  document.querySelectorAll('.tab').forEach(b => {
+    b.style.display = allowed.includes(b.dataset.section) ? '' : 'none';
+  });
+}
+
+function kpi(label, value, sub, klass = '') {
+  return `<div class="card"><div class="kpi-label">${esc(label)}</div><div class="kpi-value ${klass}">${value}</div><div class="kpi-sub">${esc(sub || '')}</div></div>`;
+}
+function statusBox(title, status, body = '') {
+  return `<div class="status-box ${status.tone}"><div class="mini">${esc(title)}</div><strong>${esc(status.label)}</strong><div class="muted">${esc(body || status.detail || '')}</div></div>`;
+}
+
+function renderOwnerPortal() {
+  const st = stats(), a = adjSummary(), mg = managementStatus(), fm = formalStatus(), tasks = openTasks();
+  const ownerReady = mg.tone === 'good' || mg.tone === 'purple';
+  const actionMessage = tasks.length ? `${tasks.length} question(s) need your answer` : 'No owner action needed';
+  const cards = [
+    kpi('Cash position', money(a.closing), 'Current management view from reviewed/imported data', a.closing >= 0 ? 'pos' : 'neg'),
+    kpi('Your action', actionMessage, tasks.length ? 'Only answer business-context questions, not accounting issues.' : 'Your accountant team can continue in the background.', tasks.length ? 'warnText' : 'pos'),
+    kpi('Business view status', mg.label, mg.detail, ownerReady ? 'purpleText' : 'warnText'),
+    kpi('Accounting status', fm.label, 'Formal certification is handled by accountant side.', fm.tone === 'good' ? 'pos' : 'warnText')
+  ].join('');
+  const ownerBanner = tasks.length
+    ? `<div class="owner-warning"><strong>Action needed:</strong> Your accountant team needs ${tasks.length} answer(s). Once answered, they can continue certification. You do not need to resolve accounting treatment yourself.</div>`
+    : `<div class="ready-banner"><strong>No action needed from owner right now.</strong> Your accountant team can continue reviewing and certifying in the background. Use the dashboard with the status label shown below.</div>`;
+  const monthRows = DATA.months.map(m => {
+    const s = stats(m.period), aa = adjSummary(m.period), mgm = managementStatus(m.period), fmm = formalStatus(m.period), ts = openTasks(m.period).length;
+    const ownerNext = ts ? 'Answer question' : (mgm.tone === 'warn' ? 'Accountant working' : 'View dashboard');
+    return `<tr><td>${esc(m.label)}</td><td>${pill(mgm.label, mgm.tone)}</td><td>${pill(fmm.label, fmm.tone)}</td><td>${ts ? pill(`${ts} question(s)`, 'warn') : pill('None', 'good')}</td><td>${esc(ownerNext)}</td><td>${money(aa.net)}</td><td>${money(aa.closing)}</td></tr>`;
+  });
+  const taskRows = tasks.slice(0, 8).map(t => {
+    const i = itemById(t.review_item_id);
+    return `<tr class="clickable-row" data-open-item="${esc(t.review_item_id)}"><td>${esc(t.period)}</td><td>${esc(t.review_item_id)}</td><td>${pill(t.status)}</td><td>${esc(t.question || i?.suggested_action || i?.description || '')}</td><td>${esc(i?.source_reference || '')}</td><td><button class="btn primary" onclick="openModal('${esc(t.review_item_id)}');event.stopPropagation()">Answer</button></td></tr>`;
+  });
+  document.getElementById('owner').innerHTML = `
+    ${ownerBanner}
+    <div class="grid cards">${cards}</div>
+    <div class="grid two">
+      <div class="card owner-simple"><div class="portal-tag">Owner view</div><h2>What you need to know</h2>
+        <div class="status-box ${mg.tone}"><div class="mini">Can I use this for business decisions?</div><strong>${esc(mg.label)}</strong><div class="muted">${esc(mg.detail)}</div></div>
+        <div class="status-box ${fm.tone}"><div class="mini">Can I use this for formal accounting?</div><strong>${esc(fm.label)}</strong><div class="muted">${esc(fm.detail)}</div></div>
+        <div class="notice"><strong>Plain-English rule:</strong> if it is management-ready, you can use it to understand the business. If it is not accountant-certified, do not use it for tax, audit, or formal accounts yet.</div>
+      </div>
+      <div class="card owner-simple"><div class="portal-tag">Owner time protection</div><h2>Your only jobs</h2>
+        <div class="soft-list">
+          <div class="soft-item"><strong>1. Answer questions</strong><div class="muted">Only when your accountant team needs business context.</div></div>
+          <div class="soft-item"><strong>2. Upload missing files</strong><div class="muted">Later this becomes document requests. For now, this demo tracks questions.</div></div>
+          <div class="soft-item"><strong>3. Read the dashboard</strong><div class="muted">The review work stays in the accountant operations center.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card"><h2>Company/month status for owner</h2>${table(['Month','Business-use status','Accounting status','Owner action','Next step','Net movement','Closing cash'], monthRows)}</div>
+    <div class="card"><h2>Questions requiring owner answer</h2>${taskRows.length ? table(['Period','Review item','Task status','Question','Source','Action'], taskRows) : '<div class="notice oknotice">No owner clarification tasks are open.</div>'}</div>
+  `;
+  document.querySelectorAll('[data-open-item]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.openItem)));
+}
+
+function nextActionForMonth(period) {
+  const s = stats(period), mg = managementStatus(period), fm = formalStatus(period), tasks = openTasks(period).length;
+  if (tasks) return 'Waiting for owner answer';
+  if (s.management_blocking > 0) return 'Resolve management blockers';
+  if (mg.label !== 'Management-ready' && mg.label !== 'Accountant-certified') return 'Mark management-ready';
+  if (s.formal_blocking > 0) return 'Certify remaining items';
+  if (fm.label !== 'Accountant-certified') return 'Accountant certify period';
+  return 'Ready / locked later';
+}
+function triageCounts(period = selected) {
+  const items = period === 'ALL' ? scopeItems() : allItems().filter(i => i.period === period);
+  const groups = {};
+  items.forEach(i => {
+    const key = `${generalIssueType(i)}|${i.severity || 'Unknown'}`;
+    if (!groups[key]) groups[key] = { area: generalIssueType(i), severity: i.severity || 'Unknown', total: 0, open: 0, value: 0 };
+    groups[key].total += 1;
+    if (needsAccountantWork(i)) groups[key].open += 1;
+    const tx = txById(i.related_object_id);
+    if (tx) groups[key].value += Number(tx.amount_rsd_equivalent || 0);
+  });
+  return Object.values(groups).sort((a,b) => b.open - a.open || b.value - a.value);
+}
+function renderAccountantWorkbench() {
+  const st = stats(), a = adjSummary(), tasks = openTasks(), needs = scopeItems().filter(needsAccountantWork).length;
+  const autoClean = DATA.portfolio_summary.transactions_extracted - DATA.portfolio_summary.manual_review_items;
+  const cards = [
+    kpi('Exception queue', needs, 'Only exceptions should need accountant attention', needs ? 'warnText' : 'pos'),
+    kpi('Auto-prepared rows', autoClean, 'Rows extracted without manual review items across loaded months', 'pos'),
+    kpi('Owner questions', tasks.length, 'Questions currently routed to owner', tasks.length ? 'warnText' : 'pos'),
+    kpi('Adjusted closing', money(a.closing), 'After local review edits and adjustments', a.closing >= 0 ? 'pos' : 'neg')
+  ].join('');
+  const monthRows = DATA.months.map(m => {
+    const s = stats(m.period), mg = managementStatus(m.period), fm = formalStatus(m.period), bs = batchStatus(m.period);
+    return `<tr><td>${esc(m.label)}</td><td>${m.summary.transactions_extracted}</td><td>${m.summary.template_reuse_rate_percent ?? 0}%</td><td>${m.summary.category_reuse_rate_percent ?? 0}%</td><td>${s.total}</td><td>${s.management_blocking}</td><td>${s.formal_blocking}</td><td>${openTasks(m.period).length}</td><td>${pill(mg.label, mg.tone)}</td><td>${pill(fm.label, fm.tone)}</td><td>${esc(nextActionForMonth(m.period))}</td></tr>`;
+  });
+  const groupRows = triageCounts().map(g => `<tr><td>${pill(g.area, 'purple')}</td><td>${pill(g.severity)}</td><td>${g.open}</td><td>${g.total}</td><td>${money(g.value)}</td><td><button class="btn" onclick="setReviewFilter('', '${esc(g.severity)}', '${esc(g.area)}')">Open group</button></td></tr>`);
+  const priority = scopeItems().filter(needsAccountantWork).sort((x,y) => {
+    const sev = v => v === 'High' ? 3 : v === 'Medium' ? 2 : 1;
+    const txv = z => Number(txById(z.related_object_id)?.amount_rsd_equivalent || 0);
+    return sev(y.severity) - sev(x.severity) || txv(y) - txv(x);
+  }).slice(0, 12).map(i => {
+    const tx = txById(i.related_object_id);
+    return `<tr class="clickable-row" data-open-item="${esc(i.review_item_id)}"><td>${esc(i.period)}</td><td>${esc(i.review_item_id)}</td><td>${pill(i.severity)}</td><td>${pill(generalIssueType(i), 'purple')}</td><td>${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}</td><td>${tx ? money(tx.amount_rsd_equivalent) : ''}</td><td>${esc(i.description)}</td><td>${esc(i.source_reference || '')}</td></tr>`;
+  });
+  document.getElementById('accountant').innerHTML = `
+    <div class="grid cards">${cards}</div>
+    <div class="grid two">
+      <div class="card"><div class="portal-tag">Accountant operations center</div><h2>Fast workflow</h2><p class="muted">The app should prepare the data automatically, route only exceptions to the accountant team, and keep the owner involved only for business-context questions.</p>
+        <div class="actions">
+          <button class="btn primary" onclick="setActiveSection('review')">Open exception queue</button>
+          <button class="btn" onclick="setReviewFilter('needs_review','','')">Needs review only</button>
+          <button class="btn" onclick="setReviewFilter('needs_owner_clarification','','')">Owner questions</button>
+          <button class="btn good" onclick="exportAccountantPack()">Export accountant pack</button>
+        </div>
+      </div>
+      <div class="card"><div class="portal-tag">Automation status</div><h2>Template reuse and future files</h2>
+        <div class="soft-list">
+          <div class="soft-item"><strong>March:</strong> initial setup month. Heavy review creates the first template.</div>
+          <div class="soft-item"><strong>April:</strong> template reuse ${DATA.months[1].summary.template_reuse_rate_percent}% and category reuse ${DATA.months[1].summary.category_reuse_rate_percent}%.</div>
+          <div class="soft-item"><strong>May:</strong> template reuse ${DATA.months[2].summary.template_reuse_rate_percent}% and category reuse ${DATA.months[2].summary.category_reuse_rate_percent}%.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card"><h2>Month operations board</h2>${table(['Month','Tx extracted','Template reuse','Category reuse','Queue','Mgmt blockers','Formal blockers','Owner tasks','Management','Accounting','Next action'], monthRows)}</div>
+    <div class="grid two">
+      <div class="card"><h2>Exception groups</h2>${groupRows.length ? table(['Review area','Severity','Open','Total','Linked value','Action'], groupRows) : '<div class="notice oknotice">No exception groups in this scope.</div>'}</div>
+      <div class="card"><h2>Accountant-side bulk handling</h2><p class="muted">Open the Review Center, filter the queue, then apply a bulk action to the filtered items. This is how similar files become efficient over time.</p><div class="soft-list">
+        <div class="soft-item"><strong>Low-risk known items:</strong> bulk accept for management analysis.</div>
+        <div class="soft-item"><strong>Unclear accounting treatment:</strong> bulk send to accountant review.</div>
+        <div class="soft-item"><strong>Reviewed items:</strong> bulk accountant certify after professional check.</div>
+      </div></div>
+    </div>
+    <div class="card"><h2>Priority queue</h2>${priority.length ? table(['Period','Item','Severity','Area','Status','Amount','Description','Source'], priority) : '<div class="notice oknotice">No accountant priority items in this scope.</div>'}</div>
+  `;
+  document.querySelectorAll('[data-open-item]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.openItem)));
+}
+
+function renderShared() {
+  const tasks = openTasks();
+  const rows = tasks.map(t => {
+    const i = itemById(t.review_item_id);
+    return `<tr class="clickable-row" data-open-item="${esc(t.review_item_id)}"><td>${esc(t.period)}</td><td>${esc(t.review_item_id)}</td><td>${pill(t.status)}</td><td>${esc(t.question || '')}</td><td>${esc(t.owner_answer || '')}</td><td>${esc(t.asked_at || '')}</td><td>${esc(i?.source_reference || '')}</td></tr>`;
+  });
+  const decisionRows = Object.values(STATE.decisions).slice(-15).reverse().map(d => `<tr><td>${esc(d.period)}</td><td>${esc(d.review_item_id)}</td><td>${pill(statusLabel(d.status))}</td><td>${esc(d.reviewer)}</td><td>${esc(d.note || '')}</td><td>${esc(d.decided_at)}</td></tr>`);
+  document.getElementById('shared').innerHTML = `
+    <div class="card"><h2>Shared owner-accountant workspace</h2><p class="muted">This is where accountant questions and owner answers stay attached to the same review item, so both sides remain aligned.</p>${rows.length ? table(['Period','Review item','Status','Question to owner','Owner answer','Asked at','Source'], rows) : '<div class="notice oknotice">No open owner-accountant tasks.</div>'}</div>
+    <div class="card"><h2>Recent review decisions</h2>${decisionRows.length ? table(['Period','Review item','Decision','Reviewer / actor','Note','Timestamp'], decisionRows) : '<div class="notice">No local decisions yet.</div>'}</div>
+  `;
+  document.querySelectorAll('[data-open-item]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.openItem)));
+}
+
+function captureReviewUI() {
+  const q = document.getElementById('rq'), rs = document.getElementById('rs'), rv = document.getElementById('rv'), ra = document.getElementById('ra'), wrap = document.querySelector('#reviewTable .table-wrap');
+  if (q) REVIEW_UI.q = q.value || '';
+  if (rs) REVIEW_UI.status = rs.value || '';
+  if (rv) REVIEW_UI.severity = rv.value || '';
+  if (ra) REVIEW_UI.area = ra.value || '';
+  if (wrap) { REVIEW_UI.scrollTop = wrap.scrollTop || 0; REVIEW_UI.scrollLeft = wrap.scrollLeft || 0; }
+}
+function itemMatchesReviewUI(i) {
+  const q = String(REVIEW_UI.q || '').toLowerCase(), sf = REVIEW_UI.status || '', vf = REVIEW_UI.severity || '', af = REVIEW_UI.area || '';
+  if (sf && itemStatus(i) !== sf) return false;
+  if (vf && i.severity !== vf) return false;
+  if (af && generalIssueType(i) !== af) return false;
+  const hay = JSON.stringify({ i, d: STATE.decisions[i.review_item_id] || {}, c: STATE.controlOverrides[i.review_item_id] || {}, t: taskFor(i.review_item_id) || {} }).toLowerCase();
+  if (q && !hay.includes(q)) return false;
   return true;
 }
-function restoreReviewScroll(){requestAnimationFrame(()=>{const wrap=document.querySelector('#reviewTable .table-wrap');if(wrap){wrap.scrollTop=REVIEW_UI.scrollTop||0;wrap.scrollLeft=REVIEW_UI.scrollLeft||0;wrap.onscroll=()=>{REVIEW_UI.scrollTop=wrap.scrollTop||0;REVIEW_UI.scrollLeft=wrap.scrollLeft||0;};}})}
-function nextMatchingReviewItem(excludeId){return scopeItems().find(x=>x.review_item_id!==excludeId&&!isResolved(x)&&itemMatchesReviewUI(x))||scopeItems().find(x=>x.review_item_id!==excludeId&&!isResolved(x))}
+function restoreReviewScroll() { requestAnimationFrame(() => { const wrap = document.querySelector('#reviewTable .table-wrap'); if (wrap) { wrap.scrollTop = REVIEW_UI.scrollTop || 0; wrap.scrollLeft = REVIEW_UI.scrollLeft || 0; wrap.onscroll = () => { REVIEW_UI.scrollTop = wrap.scrollTop || 0; REVIEW_UI.scrollLeft = wrap.scrollLeft || 0; }; } }); }
+function nextMatchingReviewItem(excludeId) { return scopeItems().find(x => x.review_item_id !== excludeId && itemMatchesReviewUI(x) && !['accountant_certified', 'rejected', 'management_ready'].includes(itemStatus(x))) || scopeItems().find(x => x.review_item_id !== excludeId && needsAccountantWork(x)); }
 
-function generalIssueType(i){const raw=`${i.issue_type||''} ${i.description||''} ${i.details||''}`.toLowerCase();if(raw.includes('formula')||raw.includes('validation')||raw.includes('monthly')||raw.includes('tie-out')||raw.includes('tie_out')||String(i.related_object_id||'').startsWith('VAL'))return'Validation / control';if(raw.includes('mapping')||raw.includes('new_category')||raw.includes('new category')||raw.includes('category')||raw.includes('confidence'))return'Mapping / category';if(raw.includes('transaction')||raw.includes('large')||raw.includes('amount')||raw.includes('eur')||raw.includes('non_operating')||raw.includes('non-operating'))return'Transaction review';if(raw.includes('sheet')||raw.includes('template')||raw.includes('naming')||raw.includes('source')||raw.includes('file'))return'Source structure';return'Other'}
-function generalOptions(v=''){return ['Validation / control','Mapping / category','Transaction review','Source structure','Other'].map(o=>`<option value="${esc(o)}" ${o===v?'selected':''}>${esc(o)}</option>`).join('')}
+function setReviewFilter(status = '', severity = '', area = '', q = '') {
+  REVIEW_UI.status = status;
+  REVIEW_UI.severity = severity;
+  REVIEW_UI.area = area;
+  REVIEW_UI.q = q;
+  REVIEW_UI.scrollTop = 0;
+  REVIEW_UI.scrollLeft = 0;
+  setActiveSection('review');
+  renderReview();
+}
+function filteredReviewItems() {
+  captureReviewUI();
+  return scopeItems().filter(itemMatchesReviewUI);
+}
+function bulkSetFiltered(status) {
+  captureReviewUI();
+  const items = filteredReviewItems().filter(i => !['accountant_certified', 'rejected'].includes(itemStatus(i)));
+  if (!items.length) return alert('No editable items match the current filters.');
+  const label = statusLabel(status);
+  if (!confirm(`Apply "${label}" to ${items.length} filtered item(s)?\n\nUse this only after the current filter represents a safe work group.`)) return;
+  const reviewer = 'Bulk Accountant Reviewer';
+  items.forEach(i => {
+    STATE.decisions[i.review_item_id] = {
+      review_item_id: i.review_item_id,
+      period: i.period,
+      status,
+      resolution_type: `bulk_${status}`,
+      role: 'accountant',
+      review_area: generalIssueType(i),
+      reviewer,
+      note: `Bulk action applied from Accountant Operations Center / Review Center filtered queue.`,
+      decided_at: now(),
+      before: { review_item: i, previous_status: itemStatus(i) },
+      after: { review_item_status: status },
+      source_reference: i.source_reference,
+      related_object_id: i.related_object_id,
+      management_analysis_status: ['owner_reviewed', 'management_ready', 'needs_accountant_review', 'accountant_certified'].includes(status) ? 'usable_with_limitations' : status === 'rejected' ? 'excluded' : 'not_ready',
+      accountant_review_status: status === 'accountant_certified' ? 'certified' : ['needs_accountant_review', 'owner_reviewed', 'management_ready'].includes(status) ? 'pending_or_reviewed' : status,
+      formal_reporting_status: status === 'accountant_certified' ? 'accountant_certified' : status === 'rejected' ? 'excluded' : 'not_certified'
+    };
+    if (['management_ready','accountant_certified','rejected'].includes(status) && STATE.clarificationTasks[i.review_item_id]) {
+      STATE.clarificationTasks[i.review_item_id].status = 'closed';
+      STATE.clarificationTasks[i.review_item_id].closed_by = reviewer;
+      STATE.clarificationTasks[i.review_item_id].closed_at = now();
+    }
+  });
+  audit('bulk_review_action', { status, item_count: items.length, selected_scope: selected, filters: { ...REVIEW_UI } });
+  saveState();
+  renderAll();
+  setActiveSection('review');
+  restoreReviewScroll();
+}
 
-function stats(period=selected){const items=period==='ALL'?allItems():allItems().filter(i=>i.period===period);const out={total:items.length,resolved:0,blocking:0,needs_review:0,in_review:0,certified:0,edited_certified:0,rejected:0,escalated:0};items.forEach(i=>{const s=itemStatus(i);out[s]=(out[s]||0)+1;if(isResolved(i))out.resolved++;if(blocks(i))out.blocking++});return out}
-function baseQuality(period=selected){if(period==='ALL')return Number(DATA.portfolio_summary.average_data_quality_score||0);return Number(DATA.months.find(m=>m.period===period).summary.data_quality_score||0)}
-function localQuality(period=selected){const st=stats(period),base=baseQuality(period);return st.total?Math.min(100,base+(100-base)*(st.resolved/st.total)):base}
-function mappingFor(t){return [...(STATE.mappingRules||[])].reverse().find(r=>(!r.period||r.period==='ALL'||r.period===t.period)&&r.direction===t.direction&&String(r.raw_category)===String(t.raw_category))}
-function effTx(t){let out={...t};const rule=mappingFor(out);if(rule&&!STATE.txOverrides[out.transaction_id]?.suggested_category){out.suggested_category=rule.suggested_category;out.report_group=rule.report_group||out.report_group;out.mapping_rule_applied=rule.mapping_rule_id}if(STATE.txOverrides[out.transaction_id])out={...out,...STATE.txOverrides[out.transaction_id]};return out}
+function renderReview() {
+  const items = scopeItems();
+  const areas = [...new Set(items.map(generalIssueType))].sort();
+  const sevs = [...new Set(items.map(i => i.severity))].sort();
+  const statusOpts = [['', 'All statuses'], ...Object.keys(STATUS_META).map(k => [k, STATUS_META[k].label])].map(([v, l]) => `<option value="${esc(v)}" ${REVIEW_UI.status === v ? 'selected' : ''}>${esc(l)}</option>`).join('');
+  const sevOpts = `<option value="" ${REVIEW_UI.severity === '' ? 'selected' : ''}>All severities</option>` + sevs.map(x => `<option value="${esc(x)}" ${REVIEW_UI.severity === x ? 'selected' : ''}>${esc(x)}</option>`).join('');
+  const areaOpts = `<option value="" ${REVIEW_UI.area === '' ? 'selected' : ''}>All review areas</option>` + areas.map(x => `<option value="${esc(x)}" ${REVIEW_UI.area === x ? 'selected' : ''}>${esc(x)}</option>`).join('');
+  document.getElementById('review').innerHTML = `<div class="card"><h2>Manual Review Queue</h2><p class="muted">Exception-based accountant/team workspace. Filter first, then review one-by-one or apply a bulk action to a safe group of similar items.</p><div class="toolbar"><input id="rq" placeholder="Search issue, source, category..." value="${esc(REVIEW_UI.q)}" oninput="renderReviewTable()"><select id="rs" onchange="renderReviewTable()">${statusOpts}</select><select id="rv" onchange="renderReviewTable()">${sevOpts}</select><select id="ra" onchange="renderReviewTable()">${areaOpts}</select></div><div class="toolbar"><span class="mini">Bulk actions for currently filtered items:</span><button class="btn purpleBtn" onclick="bulkSetFiltered('management_ready')">Bulk accept for management</button><button class="btn warn" onclick="bulkSetFiltered('needs_accountant_review')">Bulk needs accountant review</button><button class="btn good" onclick="bulkSetFiltered('accountant_certified')">Bulk accountant certify</button><button class="btn bad" onclick="bulkSetFiltered('rejected')">Bulk reject/exclude</button></div><div class="toolbar"><button class="btn primary" onclick="exportPackage()">Export certified package</button><button class="btn good" onclick="exportAccountantPack()">Export accountant review pack</button><button class="btn" onclick="exportState()">Export decisions only</button><button class="btn bad" onclick="resetProgress()">Reset local progress</button></div><div id="reviewTable"></div></div>`;
+  renderReviewTable();
+}
+function renderReviewTable() {
+  captureReviewUI();
+  const filtered = scopeItems().filter(itemMatchesReviewUI);
+  const rows = filtered.map(i => {
+    const tx = txById(i.related_object_id), et = tx ? effTx(tx) : null, d = STATE.decisions[i.review_item_id], task = taskFor(i.review_item_id);
+    const value = et ? Number(et.amount_rsd_equivalent || 0) : 0;
+    const triage = i.severity === 'High' || value > 50000 ? 'High priority' : generalIssueType(i) === 'Validation / control' ? 'Control review' : 'Standard exception';
+    return `<tr class="clickable-row" data-review-id="${esc(i.review_item_id)}"><td>${esc(i.period)}</td><td>${esc(i.review_item_id)}</td><td>${pill(i.severity)}</td><td>${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}</td><td>${pill(generalIssueType(i), 'purple')}</td><td>${pill(triage, triage === 'High priority' ? 'bad' : 'info')}</td><td class="mini">${esc(i.issue_type)}</td><td>${et ? esc(et.raw_category) : ''}</td><td>${et ? money(et.amount_rsd_equivalent) : ''}</td><td>${task ? pill(task.status) : ''}</td><td>${esc(i.source_reference)}</td><td>${esc(i.description)}</td><td>${d ? esc(d.resolution_type) : 'Click to review'}</td></tr>`;
+  });
+  const summary = `<div class="notice"><strong>Filtered items:</strong> ${filtered.length}. Review one item by clicking a row, or use bulk actions only after filtering to a safe group.</div>`;
+  document.getElementById('reviewTable').innerHTML = summary + table(['Period', 'ID', 'Severity', 'Status', 'Review area', 'Triage', 'Raw type', 'Raw category', 'Amount', 'Owner task', 'Source', 'Description', 'Decision'], rows.length ? rows : [`<tr><td colspan="13"><div class="notice oknotice">No items match the current filters.</div></td></tr>`]);
+  document.querySelectorAll('[data-review-id]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.reviewId)));
+  restoreReviewScroll();
+}
 
-function manualAdjustmentRows(period=selected){return Object.values(STATE.manualAdjustments||{}).filter(a=>period==='ALL'||a.period===period).filter(a=>{const d=STATE.decisions[a.review_item_id];return d&&['certified','edited_certified'].includes(d.status)&&!a.excluded})}
-function displayTxRows(period=selected){const months=period==='ALL'?DATA.months:[DATA.months.find(m=>m.period===period)];return [...months.flatMap(m=>m.transactions.map(effTx)),...manualAdjustmentRows(period)]}
+function renderTx() {
+  document.getElementById('transactions').innerHTML = `<div class="card"><h2>Transactions after local edits</h2><p class="muted">Includes original normalized transactions, local transaction edits, mapping-rule effects, and manual adjustments from validation/control reviews.</p><div class="toolbar"><input id="tq" placeholder="Search transactions..." oninput="renderTxTable()"><select id="tdir" onchange="renderTxTable()"><option value="">All directions</option><option value="inflow">Inflows</option><option value="outflow">Outflows</option></select><select id="tex" onchange="renderTxTable()"><option value="active">Active only</option><option value="all">Show rejected too</option></select></div><div id="txTable"></div></div>`;
+  renderTxTable();
+}
+function renderTxTable() {
+  const q = String(document.getElementById('tq')?.value || '').toLowerCase(), dir = document.getElementById('tdir')?.value || '', all = document.getElementById('tex')?.value === 'all';
+  const rows = displayTxRows(selected).filter(t => all || !t.excluded).filter(t => !dir || t.direction === dir).filter(t => !q || JSON.stringify(t).toLowerCase().includes(q)).slice(0, 900).map(t => `<tr><td>${t.period}</td><td>${esc(t.transaction_id)}</td><td>${esc(t.date)}</td><td>${pill(t.direction)}</td><td>${esc(t.payment_method)}</td><td>${money(t.amount_rsd_equivalent)}</td><td>${esc(t.raw_category)}</td><td>${esc(t.suggested_category)}</td><td>${esc(t.report_group)}</td><td>${esc(t.description)}</td><td>${esc(t.source_reference)}</td><td>${pill(t.excluded ? 'Rejected' : (t.review_status || 'staged'))}</td></tr>`);
+  document.getElementById('txTable').innerHTML = table(['Period', 'ID', 'Date', 'Direction', 'Method', 'Amount', 'Raw category', 'Mapped category', 'Report group', 'Description', 'Source', 'Status'], rows);
+}
+function renderMapping() {
+  const rules = (STATE.mappingRules || []).map(r => `<tr><td>${esc(r.period || 'ALL')}</td><td>${pill(r.direction)}</td><td>${esc(r.raw_category)}</td><td>${esc(r.suggested_category)}</td><td>${esc(r.report_group)}</td><td>${esc(r.created_from_review_item_id)}</td><td>${esc(r.reviewer)}</td><td>${esc(r.created_at)}</td></tr>`);
+  const base = scopeMonths().flatMap(m => m.mapping_suggestions).map(x => `<tr><td>${x.period}</td><td>${pill(x.direction)}</td><td>${esc(x.raw_category)}</td><td>${esc(x.suggested_category)}</td><td>${esc(x.report_group)}</td><td>${x.rows_affected}</td><td>${money(x.total_rsd_equivalent)}</td><td>${pill(x.confidence)}</td></tr>`);
+  document.getElementById('mapping').innerHTML = `<div class="card"><h2>Approved mapping rules created during review</h2>${rules.length ? table(['Period', 'Direction', 'Raw category', 'Mapped category', 'Report group', 'From item', 'Reviewer', 'Created'], rules) : '<div class="notice">No local mapping rules created yet.</div>'}</div><div class="card"><h2>Original mapping suggestions</h2>${table(['Period', 'Direction', 'Raw category', 'Suggested category', 'Report group', 'Rows', 'Total', 'Confidence'], base)}</div>`;
+}
+function renderValidation() {
+  const rows = scopeMonths().flatMap(m => m.validation_results).map(v => {
+    const linked = allItems().find(i => i.related_object_id === v.validation_id);
+    const c = linked ? STATE.controlOverrides[linked.review_item_id] : null;
+    return `<tr><td>${v.period}</td><td>${esc(v.validation_id || '')}</td><td>${esc(v.check_name)}</td><td>${pill(v.status)}</td><td>${esc(v.severity)}</td><td>${esc(v.difference)}</td><td>${c ? pill('Control reviewed', 'purple') : ''}</td><td>${esc(c?.trusted_source || '')}</td><td>${esc(c?.accounting_treatment || '')}</td><td>${esc(v.explanation)}</td></tr>`;
+  });
+  document.getElementById('validation').innerHTML = `<div class="card"><h2>Validation / control results</h2><p class="muted">These can be resolved in the Review Center even when no single transaction is linked. Use this area for formula, monthly summary, tie-out, and source-control issues.</p>${table(['Period', 'ID', 'Check', 'Status', 'Severity', 'Original difference', 'Local status', 'Trusted source', 'Treatment', 'Explanation'], rows)}</div>`;
+}
+function renderCert() {
+  const rows = scopeMonths().map(m => {
+    const s = stats(m.period), mg = managementStatus(m.period), fm = formalStatus(m.period), bs = batchStatus(m.period);
+    const mgDisabled = s.management_blocking > 0 || selected === 'ALL';
+    const certDisabled = s.formal_blocking > 0 || selected === 'ALL';
+    return `<tr><td>${m.label}</td><td>${pill(mg.label, mg.tone)}</td><td>${pill(fm.label, fm.tone)}</td><td>${s.management_blocking}</td><td>${s.formal_blocking}</td><td>${localQuality(m.period).toFixed(1)}/100</td><td>${bs.management_ready ? esc(bs.management_ready_at || '') : ''}</td><td>${bs.accountant_certified ? esc(bs.accountant_certified_at || '') : ''}</td><td>${selected === 'ALL' ? '<span class="mini">Choose one month</span>' : `<button class="btn purpleBtn" ${mgDisabled ? 'disabled' : ''} onclick="markMonthManagementReady()">Mark management-ready</button> <button class="btn good" ${certDisabled ? 'disabled' : ''} onclick="certifyMonthAccountant()">Accountant certify</button>`}</td></tr>`;
+  });
+  document.getElementById('certification').innerHTML = `<div class="card"><h2>Batch status and certification</h2><p class="muted">Management-ready means the owner can use dashboards with warnings. Accountant-certified means professional/accounting review is complete for that period.</p>${table(['Month', 'Management status', 'Accountant status', 'Mgmt blockers', 'Formal blockers', 'Quality', 'Management-ready at', 'Certified at', 'Action'], rows)}</div>`;
+}
 
-function adjSummary(period=selected){const months=period==='ALL'?DATA.months:[DATA.months.find(m=>m.period===period)];const tx=displayTxRows(period).filter(t=>!t.excluded);const inflows=tx.filter(t=>t.direction==='inflow').reduce((a,t)=>a+Number(t.amount_rsd_equivalent||0),0);const outflows=tx.filter(t=>t.direction==='outflow').reduce((a,t)=>a+Number(t.amount_rsd_equivalent||0),0);const opening=period==='ALL'?DATA.portfolio_summary.opening_position:months[0].summary.opening_position;return{opening,inflows,outflows,net:inflows-outflows,closing:Number(opening||0)+inflows-outflows,rows:tx.length}}
-function renderAll(){document.getElementById('badge').textContent=`${DATA.company_code} • Review Center v0.5`;renderOverview();renderReview();renderTx();renderMapping();renderValidation();renderCert();renderAssistant();renderReports()}
-function renderOverview(){const st=stats(),a=adjSummary();const cards=[['Open/in review',st.needs_review+st.in_review,'Needs manual work','warnText'],['Certified',st.certified+st.edited_certified,'Item-level decisions','pos'],['Rejected',st.rejected,'Excluded rows','neg'],['Escalated',st.escalated,'Blocks batch certification','warnText'],['Adjusted inflows',money(a.inflows),'After local edits'],['Adjusted outflows',money(a.outflows),'After local edits'],['Adjusted closing',money(a.closing),'Opening + adjusted net'],['Local quality',`${localQuality().toFixed(1)}/100`,'Improves as queue resolves','purpleText']];const rows=DATA.months.map(m=>{const s=stats(m.period),aa=adjSummary(m.period),b=STATE.batchCertifications[m.period];return`<tr><td>${m.label}</td><td>${s.total}</td><td>${s.resolved}</td><td>${s.blocking}</td><td>${money(aa.net)}</td><td>${money(aa.closing)}</td><td>${localQuality(m.period).toFixed(1)}/100</td><td>${pill(b?'Batch certified':'Not certified')}</td></tr>`});const next=scopeItems().filter(i=>!isResolved(i)).slice(0,8).map(i=>`<div class="issue"><strong>${esc(i.month_label)} • ${esc(i.review_item_id)}</strong><br>${pill(i.severity)} ${pill(statusLabel(itemStatus(i)))}<div class="muted">${esc(i.description)}</div></div>`).join('')||'<div class="notice oknotice">No unresolved items in this scope.</div>';document.getElementById('overview').innerHTML=`<div class="grid cards">${cards.map(c=>`<div class="card"><div class="kpi-label">${c[0]}</div><div class="kpi-value ${c[3]||''}">${c[1]}</div><div class="kpi-sub">${c[2]}</div></div>`).join('')}</div><div class="grid two"><div class="card"><h2>Certification progress</h2>${table(['Month','Queue','Resolved','Blocking','Adjusted net','Adjusted closing','Quality','Batch'],rows)}</div><div class="card"><h2>Next unresolved items</h2>${next}</div></div>`}
-function renderReview(){
-const items=scopeItems();const areas=[...new Set(items.map(generalIssueType))].sort();const sevs=[...new Set(items.map(i=>i.severity))].sort();
-const statusOpts=[['','All statuses'],['needs_review','Needs review'],['in_review','In review'],['certified','Certified'],['edited_certified','Edited + certified'],['rejected','Rejected'],['escalated','Escalated']].map(([v,l])=>`<option value="${esc(v)}" ${REVIEW_UI.status===v?'selected':''}>${esc(l)}</option>`).join('');
-const sevOpts=`<option value="" ${REVIEW_UI.severity===''?'selected':''}>All severities</option>`+sevs.map(x=>`<option value="${esc(x)}" ${REVIEW_UI.severity===x?'selected':''}>${esc(x)}</option>`).join('');
-const areaOpts=`<option value="" ${REVIEW_UI.area===''?'selected':''}>All review areas</option>`+areas.map(x=>`<option value="${esc(x)}" ${REVIEW_UI.area===x?'selected':''}>${esc(x)}</option>`).join('');
-document.getElementById('review').innerHTML=`<div class="card"><h2>Manual Review Queue</h2><p class="muted">Issue types are streamlined into broad review areas. Filters, search, and scroll position now stay where you left them after certifying an item.</p><div class="toolbar"><input id="rq" placeholder="Search issue, source, category..." value="${esc(REVIEW_UI.q)}" oninput="renderReviewTable()"><select id="rs" onchange="renderReviewTable()">${statusOpts}</select><select id="rv" onchange="renderReviewTable()">${sevOpts}</select><select id="ra" onchange="renderReviewTable()">${areaOpts}</select></div><div class="toolbar"><button class="btn primary" onclick="exportPackage()">Export certified package</button><button class="btn" onclick="exportState()">Export decisions only</button><button class="btn bad" onclick="resetProgress()">Reset local review progress</button></div><div class="mini">Tip: keep the status filter on “Needs review”. After you certify an item, it disappears from this filtered queue and you stay here to continue.</div><div id="reviewTable"></div></div>`;renderReviewTable()}
-function renderReviewTable(){captureReviewUI();const rows=scopeItems().filter(itemMatchesReviewUI).map(i=>{const tx=txById(i.related_object_id),et=tx?effTx(tx):null,d=STATE.decisions[i.review_item_id];return`<tr class="clickable-row" data-review-id="${esc(i.review_item_id)}"><td>${esc(i.period)}</td><td>${esc(i.review_item_id)}</td><td>${pill(i.severity)}</td><td>${pill(statusLabel(itemStatus(i)))}</td><td>${pill(generalIssueType(i),'purple')}</td><td class="mini">${esc(i.issue_type)}</td><td>${et?esc(et.raw_category):''}</td><td>${et?money(et.amount_rsd_equivalent):''}</td><td>${esc(i.source_reference)}</td><td>${esc(i.description)}</td><td>${d?esc(d.resolution_type):'Click to review'}</td></tr>`});document.getElementById('reviewTable').innerHTML=table(['Period','ID','Severity','Status','Review area','Raw type','Raw category','Amount','Source','Description','Decision'],rows.length?rows:[`<tr><td colspan="11"><div class="notice oknotice">No items match the current filters. Change filters or choose another month/review area.</div></td></tr>`]);document.querySelectorAll('[data-review-id]').forEach(r=>r.addEventListener('click',()=>openModal(r.dataset.reviewId)));restoreReviewScroll()}
-function renderTx(){document.getElementById('transactions').innerHTML=`<div class="card"><h2>Transactions after local edits</h2><div class="toolbar"><input id="tq" placeholder="Search transactions..." oninput="renderTxTable()"><select id="tdir" onchange="renderTxTable()"><option value="">All directions</option><option value="inflow">Inflows</option><option value="outflow">Outflows</option></select><select id="tex" onchange="renderTxTable()"><option value="active">Active only</option><option value="all">Show rejected too</option></select></div><div id="txTable"></div></div>`;renderTxTable()}
-function renderTxTable(){const q=String(document.getElementById('tq')?.value||'').toLowerCase(),dir=document.getElementById('tdir')?.value||'',all=document.getElementById('tex')?.value==='all';const rows=displayTxRows(selected).filter(t=>all||!t.excluded).filter(t=>!dir||t.direction===dir).filter(t=>!q||JSON.stringify(t).toLowerCase().includes(q)).slice(0,800).map(t=>`<tr><td>${t.period}</td><td>${esc(t.transaction_id)}</td><td>${esc(t.date)}</td><td>${pill(t.direction)}</td><td>${esc(t.payment_method)}</td><td>${money(t.amount_rsd_equivalent)}</td><td>${esc(t.raw_category)}</td><td>${esc(t.suggested_category)}</td><td>${esc(t.report_group)}</td><td>${esc(t.description)}</td><td>${esc(t.source_reference)}</td><td>${pill(t.excluded?'Rejected':(t.review_status||'staged'))}</td></tr>`);document.getElementById('txTable').innerHTML=table(['Period','ID','Date','Direction','Method','Amount','Raw category','Mapped category','Report group','Description','Source','Status'],rows)}
-function renderMapping(){const rules=(STATE.mappingRules||[]).map(r=>`<tr><td>${esc(r.period||'ALL')}</td><td>${pill(r.direction)}</td><td>${esc(r.raw_category)}</td><td>${esc(r.suggested_category)}</td><td>${esc(r.report_group)}</td><td>${esc(r.created_from_review_item_id)}</td><td>${esc(r.reviewer)}</td><td>${esc(r.created_at)}</td></tr>`);const base=scopeMonths().flatMap(m=>m.mapping_suggestions).map(x=>`<tr><td>${x.period}</td><td>${pill(x.direction)}</td><td>${esc(x.raw_category)}</td><td>${esc(x.suggested_category)}</td><td>${esc(x.report_group)}</td><td>${x.rows_affected}</td><td>${money(x.total_rsd_equivalent)}</td><td>${pill(x.confidence)}</td></tr>`);document.getElementById('mapping').innerHTML=`<div class="card"><h2>Local mapping rules created during review</h2>${rules.length?table(['Period','Direction','Raw category','Mapped category','Report group','From item','Reviewer','Created'],rules):'<div class="notice">No local mapping rules created yet.</div>'}</div><div class="card"><h2>Original mapping suggestions</h2>${table(['Period','Direction','Raw category','Suggested category','Report group','Rows','Total','Confidence'],base)}</div>`}
-function renderValidation(){const rows=scopeMonths().flatMap(m=>m.validation_results).map(v=>{const linked=allItems().find(i=>i.related_object_id===v.validation_id);const c=linked?STATE.controlOverrides[linked.review_item_id]:null;return`<tr><td>${v.period}</td><td>${esc(v.validation_id||'')}</td><td>${esc(v.check_name)}</td><td>${pill(v.status)}</td><td>${esc(v.severity)}</td><td>${esc(v.difference)}</td><td>${c?pill('Control edited','purple'):''}</td><td>${esc(c?.accounting_treatment||'')}</td><td>${esc(v.explanation)}</td></tr>`});document.getElementById('validation').innerHTML=`<div class="card"><h2>Validation Results</h2><p class="muted">Validation/control items can now be edited and certified even when no single transaction is linked.</p>${table(['Period','ID','Check','Status','Severity','Original difference','Local status','Treatment','Explanation'],rows)}</div>`}
-function renderCert(){const rows=scopeMonths().map(m=>{const s=stats(m.period),b=STATE.batchCertifications[m.period],dis=s.blocking>0||selected==='ALL';return`<tr><td>${m.label}</td><td>${s.total}</td><td>${s.resolved}</td><td>${s.blocking}</td><td>${localQuality(m.period).toFixed(1)}/100</td><td>${pill(b?'Batch certified':'Not certified')}</td><td>${selected==='ALL'?'<span class="mini">Choose one month</span>':`<button class="btn good" ${dis?'disabled':''} onclick="certifyMonth()">Certify month</button>`}</td></tr>`});document.getElementById('certification').innerHTML=`<div class="card"><h2>Batch Certification</h2><p class="muted">A month can be certified only after blocking items are resolved. Escalated items still block batch certification.</p>${table(['Month','Queue','Resolved','Blocking','Quality','Status','Action'],rows)}</div>`}
-function answer(q){const st=stats(),a=adjSummary();q=String(q||'').toLowerCase();if(q.includes('review')||q.includes('issue')||q.includes('missing'))return`Scope: ${label()}\nOpen/in-review: ${st.needs_review+st.in_review}\nEscalated: ${st.escalated}\nBlocking: ${st.blocking}\nResolved: ${st.resolved}/${st.total}\n\nNext step: open Review Center, click a line, certify/edit/reject/escalate.`;if(q.includes('cert'))return`Scope: ${label()}\nLocal quality: ${localQuality().toFixed(1)}/100\nBlocking items: ${st.blocking}\nBatch certification becomes available when blocking = 0 for a selected month.`;if(q.includes('cash')||q.includes('money'))return`Scope: ${label()}\nAdjusted opening: ${money(a.opening)}\nAdjusted inflows: ${money(a.inflows)}\nAdjusted outflows: ${money(a.outflows)}\nAdjusted closing: ${money(a.closing)}\n\nLimitation: this is still browser-certified demo data, not PostgreSQL official data.`;return`Ask about review issues, certification, or cash. Current scope: ${label()}.`}
-function renderAssistant(){const qs=['What issues need review?','What is certification progress?','How much cash do I have?'];document.getElementById('assistant').innerHTML=`<div class="card"><h2>Assistant Demo</h2><div class="toolbar">${qs.map(q=>`<button class="btn" onclick="ask('${q}')">${q}</button>`).join('')}</div><div class="toolbar"><input id="customQ" placeholder="Type a question..."><button class="btn primary" onclick="ask(document.getElementById('customQ').value)">Ask</button></div><div id="answer" class="answer">Select a question.</div></div>`}
-function ask(q){document.getElementById('answer').textContent=answer(q)}
-function renderReports(){const links=DATA.months.map(m=>`<div class="step"><div class="num">PDF</div><div><strong>${m.label} report</strong><div class="muted">Human review report.</div></div><a class="btn primary" href="${m.summary.pdf_report}" target="_blank">Open</a></div>`).join('');document.getElementById('reports').innerHTML=`<div class="card"><h2>Reports</h2><div class="timeline">${links}</div></div>`}
-function openModal(id){currentId=id;const i=itemById(id),tx=txById(i.related_object_id),et=tx?effTx(tx):null,val=!tx?valById(i.related_object_id):null,d=STATE.decisions[id];document.getElementById('modalTitle').textContent=`${i.review_item_id} - ${statusLabel(itemStatus(i))}`;document.getElementById('modalSubtitle').innerHTML=`${esc(i.month_label)} • ${pill(i.severity)} ${pill(generalIssueType(i),'purple')} <span class="mini">Raw type: ${esc(i.issue_type)}</span>`;document.getElementById('modalBody').innerHTML=`<div class="grid two"><div class="source-box"><h3>Issue</h3><p><strong>Description:</strong><br>${esc(i.description)}</p><p><strong>Details:</strong><br>${esc(i.details)}</p><p><strong>Suggested action:</strong><br>${esc(i.suggested_action)}</p></div><div class="source-box"><h3>Source</h3><p><strong>Period:</strong> ${esc(i.period)}<br><strong>Source reference:</strong> ${esc(i.source_reference||'Workbook/monthly controls')}<br><strong>Related object:</strong> ${esc(i.related_object_id||'')}</p>${val?`<p><strong>Validation:</strong><br>${esc(val.check_name)}<br>${esc(val.explanation||'')}</p>`:''}</div></div><div class="divider"></div>${et?txForm(et):noTxForm(val)}${d?`<div class="source-box"><h3>Existing decision</h3>${pill(statusLabel(d.status))} ${esc(d.resolution_type)}<p class="muted">${esc(d.note)}</p></div>`:''}<div class="divider"></div><div class="field-grid"><div class="field"><label>Reviewer name</label><input id="reviewerName" value="${esc(d?.reviewer||'Demo Reviewer')}"></div><div class="field"><label>Resolution note</label><input id="reviewNote" value="${esc(d?.note||'')}"></div></div>${et?`<label class="checkbox"><input type="checkbox" id="createMappingRule"><span>Create mapping rule from this row and apply it to similar rows.</span></label>`:''}<div class="actions"><button class="btn" onclick="saveDecision('in_review')">Mark in review</button><button class="btn good" onclick="saveDecision('certified')">Certify as correct</button><button class="btn primary" onclick="saveDecision('edited_certified')">Save edits + certify</button><button class="btn bad" onclick="saveDecision('rejected')">Reject / exclude</button><button class="btn warn" onclick="saveDecision('escalated')">Escalate</button><button class="btn" onclick="saveDecision('edited_certified',true)">Save + open next</button></div><p class="mini">In Option 2 these decisions will be stored in PostgreSQL with a full audit trail.</p>`;document.getElementById('reviewModal').classList.add('open')}
-function txForm(t){return`<div class="card"><h3>Editable transaction fields</h3><div class="field-grid"><div class="field"><label>Transaction ID</label><input id="txId" value="${esc(t.transaction_id)}" disabled></div><div class="field"><label>Date</label><input id="txDate" value="${esc(t.date||'')}"></div><div class="field"><label>Direction</label><select id="txDirection"><option value="inflow" ${t.direction==='inflow'?'selected':''}>inflow</option><option value="outflow" ${t.direction==='outflow'?'selected':''}>outflow</option></select></div><div class="field"><label>Payment method</label><input id="txPayment" value="${esc(t.payment_method||'')}"></div><div class="field"><label>Currency</label><input id="txCurrency" value="${esc(t.currency_original||'')}"></div><div class="field"><label>Amount RSD equivalent</label><input id="txAmount" type="number" step="0.01" value="${Number(t.amount_rsd_equivalent||0)}"></div><div class="field"><label>Raw category</label><input id="txRaw" value="${esc(t.raw_category||'')}"></div><div class="field"><label>Mapped category</label><input id="txCat" value="${esc(t.suggested_category||'')}"></div><div class="field"><label>Report group</label><input id="txGroup" value="${esc(t.report_group||'')}"></div><div class="field"><label>Counterparty type</label><input id="txCpType" value="${esc(t.counterparty_type||'')}"></div><div class="field"><label>Counterparty token</label><input id="txCp" value="${esc(t.counterparty||'')}"></div><div class="field"><label>Source</label><input value="${esc(t.source_reference||'')}" disabled></div><div class="field" style="grid-column:1/-1"><label>Description</label><textarea id="txDesc">${esc(t.description||'')}</textarea></div></div></div>`}
-function noTxForm(val){const i=itemById(currentId),c=STATE.controlOverrides[i.review_item_id]||{},a=STATE.manualAdjustments[i.review_item_id]||{},area=c.review_area||generalIssueType(i),expected=c.expected_value??val?.expected_value??'',actual=c.actual_value??val?.actual_value??'',diff=c.difference_amount??val?.difference??'';return`<div class="card"><h3>Editable validation/control issue</h3><p class="muted">No single transaction is linked, but this control item is now editable. Certify the treatment, record the root cause, change control values, and optionally create a manual adjustment transaction.</p><input id="ctrlIssueId" value="${esc(i.review_item_id)}" hidden><div class="field-grid"><div class="field"><label>Review area</label><select id="ctrlArea">${generalOptions(area)}</select></div><div class="field"><label>Accounting treatment</label><select id="ctrlTreatment"><option value="use_daily_transactions" ${c.accounting_treatment==='use_daily_transactions'?'selected':''}>Use extracted daily transactions as source of truth</option><option value="use_monthly_status" ${c.accounting_treatment==='use_monthly_status'?'selected':''}>Use monthly status sheet as source of truth</option><option value="formula_error_acknowledged" ${c.accounting_treatment==='formula_error_acknowledged'?'selected':''}>Formula/control issue acknowledged</option><option value="timing_difference" ${c.accounting_treatment==='timing_difference'?'selected':''}>Valid timing/accounting difference</option><option value="manual_adjustment_required" ${c.accounting_treatment==='manual_adjustment_required'?'selected':''}>Manual adjustment required</option><option value="no_issue" ${c.accounting_treatment==='no_issue'?'selected':''}>No issue after review</option><option value="needs_external_evidence" ${c.accounting_treatment==='needs_external_evidence'?'selected':''}>Needs external evidence</option></select></div><div class="field"><label>Affected report line/category</label><input id="ctrlAffectedLine" value="${esc(c.affected_report_line||'')}" placeholder="e.g. Financial income, Monthly inflows"></div><div class="field"><label>Trusted source</label><select id="ctrlTrustedSource"><option value="daily_transactions" ${c.trusted_source==='daily_transactions'?'selected':''}>Daily extracted transactions</option><option value="monthly_status" ${c.trusted_source==='monthly_status'?'selected':''}>Monthly status sheet</option><option value="bank_statement" ${c.trusted_source==='bank_statement'?'selected':''}>Bank statement / external evidence</option><option value="accountant_judgement" ${c.trusted_source==='accountant_judgement'?'selected':''}>Accountant judgement</option><option value="unknown" ${c.trusted_source==='unknown'?'selected':''}>Unknown / unresolved</option></select></div><div class="field"><label>Expected value</label><input id="ctrlExpected" value="${esc(expected)}"></div><div class="field"><label>Actual value</label><input id="ctrlActual" value="${esc(actual)}"></div><div class="field"><label>Difference amount</label><input id="ctrlDifference" type="number" step="0.01" value="${Number(diff||0)}"></div><div class="field"><label>Corrected amount RSD, if applicable</label><input id="ctrlCorrectedAmount" type="number" step="0.01" value="${Number(c.corrected_amount_rsd||0)}"></div><div class="field" style="grid-column:1/-1"><label>Root cause / issue found</label><textarea id="ctrlRootCause">${esc(c.root_cause||'')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Corrective action / certification explanation</label><textarea id="ctrlCorrectiveAction">${esc(c.corrective_action||'')}</textarea></div></div><label class="checkbox"><input type="checkbox" id="ctrlCreateAdjustment" ${a.transaction_id?'checked':''}><span>Create a manual adjustment transaction from this control issue.</span></label><div class="source-box"><h3>Optional manual adjustment</h3><div class="field-grid"><div class="field"><label>Adjustment date</label><input id="adjDate" value="${esc(a.date||`${i.period}-28`)}"></div><div class="field"><label>Direction</label><select id="adjDirection"><option value="inflow" ${a.direction==='inflow'?'selected':''}>inflow</option><option value="outflow" ${a.direction==='outflow'?'selected':''}>outflow</option></select></div><div class="field"><label>Amount RSD</label><input id="adjAmount" type="number" step="0.01" value="${Number(a.amount_rsd_equivalent||0)}"></div><div class="field"><label>Mapped category</label><input id="adjCategory" value="${esc(a.suggested_category||c.affected_report_line||'')}"></div><div class="field"><label>Report group</label><input id="adjGroup" value="${esc(a.report_group||'')}"></div><div class="field"><label>Description</label><input id="adjDesc" value="${esc(a.description||i.description||'')}"></div></div></div>${val?`<div class="source-box"><strong>Original validation:</strong><br>${esc(val.check_name)}<br>Expected: ${esc(val.expected_value)}<br>Actual: ${esc(val.actual_value)}<br>Difference: ${esc(val.difference)}<br>${esc(val.explanation||'')}</div>`:''}</div>`}
-function closeModal(){document.getElementById('reviewModal').classList.remove('open');currentId=null}
-function readControlForm(){const id=document.getElementById('ctrlIssueId')?.value;if(!id)return null;return{kind:'control',review_item_id:id,review_area:document.getElementById('ctrlArea').value,accounting_treatment:document.getElementById('ctrlTreatment').value,affected_report_line:document.getElementById('ctrlAffectedLine').value,trusted_source:document.getElementById('ctrlTrustedSource').value,expected_value:document.getElementById('ctrlExpected').value,actual_value:document.getElementById('ctrlActual').value,difference_amount:Number(document.getElementById('ctrlDifference').value||0),corrected_amount_rsd:Number(document.getElementById('ctrlCorrectedAmount').value||0),root_cause:document.getElementById('ctrlRootCause').value,corrective_action:document.getElementById('ctrlCorrectiveAction').value,create_adjustment:document.getElementById('ctrlCreateAdjustment').checked,adjustment:{date:document.getElementById('adjDate').value,direction:document.getElementById('adjDirection').value,amount_rsd_equivalent:Number(document.getElementById('adjAmount').value||0),suggested_category:document.getElementById('adjCategory').value,report_group:document.getElementById('adjGroup').value,description:document.getElementById('adjDesc').value}}}
-function readForm(){const id=document.getElementById('txId')?.value;if(id)return{kind:'transaction',transaction_id:id,date:document.getElementById('txDate').value,direction:document.getElementById('txDirection').value,payment_method:document.getElementById('txPayment').value,currency_original:document.getElementById('txCurrency').value,amount_rsd_equivalent:Number(document.getElementById('txAmount').value||0),raw_category:document.getElementById('txRaw').value,suggested_category:document.getElementById('txCat').value,report_group:document.getElementById('txGroup').value,counterparty_type:document.getElementById('txCpType').value,counterparty:document.getElementById('txCp').value,description:document.getElementById('txDesc').value};return readControlForm()}
-function saveDecision(status,next=false){captureReviewUI();const i=itemById(currentId),tx=txById(i.related_object_id),before=tx?effTx(tx):{review_item:i,validation:valById(i.related_object_id),existing_control:STATE.controlOverrides[i.review_item_id]||null},form=readForm(),reviewer=document.getElementById('reviewerName')?.value||'Demo Reviewer',note=document.getElementById('reviewNote')?.value||'';let resolution={certified:'certified_without_change',edited_certified:'edited_fields_and_certified',rejected:'rejected_excluded_from_import',escalated:'escalated_for_accountant_review',in_review:'marked_in_review'}[status]||status;if(form?.kind==='transaction'){const over={...form};delete over.kind;over.review_status=status==='edited_certified'?'Edited + certified':status==='certified'?'Certified':status==='rejected'?'Rejected':status==='escalated'?'Escalated':'In review';if(status==='rejected')over.excluded=true;STATE.txOverrides[tx.transaction_id]=over;if(document.getElementById('createMappingRule')?.checked){STATE.mappingRules.push({mapping_rule_id:`LOCAL-MAP-${Date.now()}`,period:'ALL',direction:form.direction,raw_category:form.raw_category,suggested_category:form.suggested_category,report_group:form.report_group,created_from_review_item_id:i.review_item_id,reviewer,created_at:now()})}}else if(form?.kind==='control'){const control={...form};delete control.kind;delete control.adjustment;control.updated_at=now();control.reviewer=reviewer;STATE.controlOverrides[i.review_item_id]=control;if(form.create_adjustment&&Number(form.adjustment.amount_rsd_equivalent||0)!==0&&!['rejected','escalated'].includes(status)){STATE.manualAdjustments[i.review_item_id]={transaction_id:`ADJ-${i.review_item_id}`,review_item_id:i.review_item_id,period:i.period,date:form.adjustment.date,direction:form.adjustment.direction,payment_method:'manual_adjustment',currency_original:'RSD',amount_rsd_equivalent:Number(form.adjustment.amount_rsd_equivalent||0),raw_category:'Manual control adjustment',suggested_category:form.adjustment.suggested_category,report_group:form.adjustment.report_group,counterparty_type:'internal_review',counterparty:'CONTROL_REVIEW',description:form.adjustment.description||`Manual adjustment from ${i.review_item_id}`,source_reference:i.source_reference||'Manual control review',review_status:'Manual adjustment - certified'};resolution='control_resolution_with_manual_adjustment'}else{delete STATE.manualAdjustments[i.review_item_id];if(status==='edited_certified')resolution='edited_control_issue_and_certified';if(status==='certified')resolution='certified_control_issue_without_adjustment'}}STATE.decisions[i.review_item_id]={review_item_id:i.review_item_id,period:i.period,status,resolution_type:resolution,review_area:generalIssueType(i),reviewer,note,decided_at:now(),before,after:form||{review_item_status:status},source_reference:i.source_reference,related_object_id:i.related_object_id};saveState();renderAll();setActiveSection('review');if(next){const n=nextMatchingReviewItem(i.review_item_id);n?openModal(n.review_item_id):closeModal()}else closeModal()}
-function certifyMonth(){if(selected==='ALL')return alert('Choose one month first.');const s=stats(selected);if(s.blocking>0)return alert(`${s.blocking} blocking item(s) remain.`);STATE.batchCertifications[selected]={period:selected,status:'batch_certified',reviewer:'Demo Reviewer',certified_at:now(),local_quality_score:localQuality(selected)};saveState();renderAll();alert(`${month().label} batch certified locally.`)}
-function exportObj(){return{exported_at:now(),app:'Ask Your Business Review Center Demo',version:'0.5.0',warning:'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.',company_code:DATA.company_code,selected_scope:selected,review_state:STATE,months:DATA.months.map(m=>({period:m.period,label:m.label,adjusted_summary:adjSummary(m.period),review_stats:stats(m.period),local_quality_score:localQuality(m.period),batch_certification:STATE.batchCertifications[m.period]||null,transactions:displayTxRows(m.period).map(t=>effTx(t)),unresolved_review_items:m.manual_review_queue.filter(i=>!isResolved(i)),review_decisions:Object.values(STATE.decisions).filter(d=>d.period===m.period),control_resolutions:Object.entries(STATE.controlOverrides).filter(([id,c])=>itemById(id)?.period===m.period).map(([review_item_id,c])=>({review_item_id,...c})),manual_adjustments:Object.values(STATE.manualAdjustments).filter(a=>a.period===m.period)}))}}
-function download(name,obj){const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)}
-function exportPackage(){download(`certified_import_package_${new Date().toISOString().slice(0,10)}.json`,exportObj())}
-function exportState(){download(`review_decisions_${new Date().toISOString().slice(0,10)}.json`,STATE)}
-function resetProgress(){if(confirm('Reset all local decisions and edits in this browser?')){STATE=blankState();saveState();renderAll()}}
-window.openModal=openModal;window.closeModal=closeModal;window.saveDecision=saveDecision;window.exportPackage=exportPackage;window.exportState=exportState;window.resetProgress=resetProgress;window.certifyMonth=certifyMonth;window.ask=ask;window.renderReviewTable=renderReviewTable;window.renderTxTable=renderTxTable;
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setActiveSection(b.dataset.section));
-fetch('/data/university_mar_apr_may_import_data.json').then(r=>r.json()).then(d=>{DATA=d;loadState();const sel=document.getElementById('monthSelect');sel.innerHTML='<option value="ALL">All months combined</option>'+d.months.map(m=>`<option value="${m.period}">${m.label}</option>`).join('');sel.onchange=()=>{selected=sel.value;renderAll()};renderAll()}).catch(e=>{document.getElementById('overview').innerHTML=`<div class="card"><h2>Data load error</h2><p>${esc(e.message)}</p></div>`});
+function renderAssistant() {
+  const qs = role() === 'owner'
+    ? ['Can I use this data for business decisions?', 'What does my accountant need from me?', 'How did May perform?']
+    : ['What should the accountant team review next?', 'Which months are management-ready?', 'What blocks accountant certification?'];
+  document.getElementById('assistant').innerHTML = `<div class="card"><h2>Assistant Demo</h2><p class="muted">Current version is rule-based and uses the loaded/imported data plus your local review state. Later this becomes the database-backed AI assistant.</p><div class="toolbar">${qs.map(q => `<button class="btn" onclick="ask('${esc(q)}')">${esc(q)}</button>`).join('')}</div><div class="toolbar"><input id="customQ" placeholder="Type a question..."><button class="btn primary" onclick="ask(document.getElementById('customQ').value)">Ask</button></div><div id="answer" class="answer">Select a question.</div></div>`;
+}
+function ask(q) {
+  q = String(q || '').toLowerCase();
+  const st = stats(), a = adjSummary(), mg = managementStatus(), fm = formalStatus(), tasks = openTasks();
+  let ans = '';
+  if (q.includes('accountant need') || q.includes('owner') || q.includes('clarification')) {
+    ans = `Open owner clarification tasks: ${tasks.length}\n\n${tasks.slice(0, 8).map(t => `- ${t.period} ${t.review_item_id}: ${t.question}`).join('\n') || 'No owner clarification tasks are currently open.'}\n\nLimitation: this is browser-local demo state.`;
+  } else if (q.includes('business') || q.includes('management')) {
+    ans = `Management status: ${mg.label}\n${mg.detail}\n\nAdjusted closing cash: ${money(a.closing)}\nManagement blockers: ${st.management_blocking}\n\nAccountant certification status: ${fm.label}\n${fm.detail}\n\nUse this data for management dashboards only when labelled management-ready. Formal accounting use requires accountant certification.`;
+  } else if (q.includes('may')) {
+    const aa = adjSummary('2020-05'), sm = managementStatus('2020-05'), sf = formalStatus('2020-05');
+    ans = `May 2020 based on current local review state:\nNet cash movement: ${money(aa.net)}\nClosing position: ${money(aa.closing)}\nManagement status: ${sm.label}\nAccountant status: ${sf.label}\n\nThe assistant should label this as management-ready or accountant-certified depending on the status recorded in the certification workflow.`;
+  } else if (q.includes('review next') || q.includes('blocks')) {
+    const items = scopeItems().filter(needsAccountantWork).slice(0, 10);
+    ans = `Accountant/team queue for ${label()}: ${items.length} item(s) shown below.\n\n${items.map(i => `- ${i.review_item_id}: ${statusLabel(itemStatus(i))} | ${generalIssueType(i)} | ${i.description}`).join('\n') || 'No pending accountant work in this scope.'}`;
+  } else if (q.includes('month')) {
+    ans = DATA.months.map(m => `${m.label}: ${managementStatus(m.period).label}; ${formalStatus(m.period).label}`).join('\n');
+  } else {
+    ans = `Current scope: ${label()}\nAdjusted inflows: ${money(a.inflows)}\nAdjusted outflows: ${money(a.outflows)}\nAdjusted net movement: ${money(a.net)}\nAdjusted closing: ${money(a.closing)}\n\nManagement status: ${mg.label}\nAccountant status: ${fm.label}\n\nLimitations: this answer uses local browser review state, not PostgreSQL yet.`;
+  }
+  document.getElementById('answer').textContent = ans;
+}
+function renderReports() {
+  const links = DATA.months.map(m => `<div class="step"><div class="num">PDF</div><div><strong>${m.label} report</strong><div class="muted">Human review report.</div></div><a class="btn primary" href="${m.summary.pdf_report}" target="_blank">Open</a></div>`).join('');
+  document.getElementById('reports').innerHTML = `<div class="card"><h2>Reports</h2><div class="timeline">${links}</div></div>`;
+}
+
+function openModal(id) {
+  currentId = id;
+  const i = itemById(id), tx = txById(i.related_object_id), t = taskFor(id), d = STATE.decisions[id];
+  document.getElementById('modalTitle').textContent = `${role() === 'owner' ? 'Owner task' : 'Review item'}: ${id}`;
+  document.getElementById('modalSubtitle').innerHTML = `${esc(i.period)} • ${pill(i.severity)} ${pill(generalIssueType(i), 'purple')} ${pill(statusLabel(itemStatus(i)), STATUS_META[itemStatus(i)]?.tone)}`;
+  const taskBlock = t ? `<div class="source-box"><h3>Owner clarification task</h3><strong>Question:</strong> ${esc(t.question || '')}<br><strong>Status:</strong> ${pill(t.status)}<br><strong>Owner answer:</strong> ${esc(t.owner_answer || '')}</div>` : '';
+  const source = `<div class="source-box"><h3>Issue and source evidence</h3><strong>Description:</strong> ${esc(i.description)}<br><strong>Details:</strong> ${esc(i.details || '')}<br><strong>Suggested action:</strong> ${esc(i.suggested_action || '')}<br><strong>Source:</strong> ${esc(i.source_reference || 'Workbook/control issue')}<br><strong>Related object:</strong> ${esc(i.related_object_id || '')}</div>`;
+  const editable = tx ? transactionForm(i, tx) : controlForm(i);
+  const roleFields = role() === 'accountant'
+    ? `<div class="field-grid"><div class="field"><label>Reviewer / accountant name</label><input id="reviewerName" value="${esc(d?.reviewer || 'Accountant Reviewer')}"></div><div class="field"><label>Question to owner, if clarification is needed</label><input id="ownerQuestion" value="${esc(t?.question || '')}" placeholder="Example: Was this legal cost, loan repayment, or owner withdrawal?"></div><div class="field" style="grid-column:1/-1"><label>Review note / accountant explanation</label><textarea id="reviewNote">${esc(d?.note || '')}</textarea></div></div>`
+    : `<div class="field-grid"><div class="field"><label>Owner name</label><input id="reviewerName" value="${esc(d?.reviewer || 'Business Owner')}"></div><div class="field" style="grid-column:1/-1"><label>Owner answer / business context</label><textarea id="reviewNote" placeholder="Give business context. You do not need to make a final accounting judgment.">${esc(t?.owner_answer || d?.note || '')}</textarea></div></div>`;
+  const buttons = role() === 'accountant' ? accountantButtons() : ownerButtons();
+  document.getElementById('modalBody').innerHTML = `${taskBlock}${source}<div class="divider"></div>${editable}<div class="divider"></div>${roleFields}<div class="actions modal-actions">${buttons}</div><div class="mini">Current demo stores this decision in browser localStorage. Export your package before clearing browser data.</div>`;
+  document.getElementById('reviewModal').classList.add('open');
+}
+function transactionForm(i, tx) {
+  const e = effTx(tx);
+  return `<div><h3>Editable transaction fields</h3><input type="hidden" id="txId" value="${esc(e.transaction_id)}"><div class="field-grid"><div class="field"><label>Date</label><input id="txDate" value="${esc(e.date)}"></div><div class="field"><label>Direction</label><select id="txDirection"><option value="inflow" ${e.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${e.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Payment method</label><input id="txPayment" value="${esc(e.payment_method)}"></div><div class="field"><label>Currency</label><input id="txCurrency" value="${esc(e.currency_original)}"></div><div class="field"><label>Amount RSD equivalent</label><input id="txAmount" type="number" step="0.01" value="${Number(e.amount_rsd_equivalent || 0)}"></div><div class="field"><label>Raw category</label><input id="txRaw" value="${esc(e.raw_category)}"></div><div class="field"><label>Mapped / management category</label><input id="txCat" value="${esc(e.suggested_category)}"></div><div class="field"><label>Report group</label><input id="txGroup" value="${esc(e.report_group)}"></div><div class="field"><label>Counterparty type</label><input id="txCpType" value="${esc(e.counterparty_type)}"></div><div class="field"><label>Counterparty token</label><input id="txCp" value="${esc(e.counterparty)}"></div><div class="field" style="grid-column:1/-1"><label>Description</label><textarea id="txDesc">${esc(e.description)}</textarea></div></div><label class="checkbox"><input type="checkbox" id="createMappingRule"><span>Create/update a reusable mapping rule from this row.</span></label></div>`;
+}
+function controlForm(i) {
+  const val = valById(i.related_object_id), c = STATE.controlOverrides[i.review_item_id] || {}, a = STATE.manualAdjustments[i.review_item_id] || {};
+  const diff = (c.difference_amount ?? Number(val?.difference || 0)) || 0;
+  return `<div><h3>Editable validation / control issue</h3><input type="hidden" id="ctrlIssueId" value="${esc(i.review_item_id)}"><div class="field-grid"><div class="field"><label>Review area</label><select id="ctrlArea">${generalOptions(c.review_area || generalIssueType(i))}</select></div><div class="field"><label>Trusted source</label><select id="ctrlTrustedSource"><option ${c.trusted_source === 'Daily extracted transactions' ? 'selected' : ''}>Daily extracted transactions</option><option ${c.trusted_source === 'Monthly status sheet' ? 'selected' : ''}>Monthly status sheet</option><option ${c.trusted_source === 'Manual accountant review' ? 'selected' : ''}>Manual accountant review</option><option ${c.trusted_source === 'Owner clarification' ? 'selected' : ''}>Owner clarification</option></select></div><div class="field"><label>Accounting treatment / provisional treatment</label><input id="ctrlTreatment" value="${esc(c.accounting_treatment || '')}" placeholder="Example: formula issue acknowledged; use daily extracted transactions"></div><div class="field"><label>Affected report line / category</label><input id="ctrlAffectedLine" value="${esc(c.affected_report_line || '')}"></div><div class="field"><label>Expected value</label><input id="ctrlExpected" value="${esc(c.expected_value || val?.expected_value || '')}"></div><div class="field"><label>Actual value</label><input id="ctrlActual" value="${esc(c.actual_value || val?.actual_value || '')}"></div><div class="field"><label>Difference amount</label><input id="ctrlDifference" type="number" step="0.01" value="${Number(diff || 0)}"></div><div class="field"><label>Corrected amount RSD</label><input id="ctrlCorrectedAmount" type="number" step="0.01" value="${Number(c.corrected_amount_rsd || 0)}"></div><div class="field" style="grid-column:1/-1"><label>Root cause / issue found</label><textarea id="ctrlRootCause">${esc(c.root_cause || '')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Corrective action / certification explanation</label><textarea id="ctrlCorrectiveAction">${esc(c.corrective_action || '')}</textarea></div></div><label class="checkbox"><input type="checkbox" id="ctrlCreateAdjustment" ${a.transaction_id ? 'checked' : ''}><span>Create a manual adjustment transaction from this control issue.</span></label><div class="source-box"><h3>Optional manual adjustment</h3><div class="field-grid"><div class="field"><label>Adjustment date</label><input id="adjDate" value="${esc(a.date || `${i.period}-28`)}"></div><div class="field"><label>Direction</label><select id="adjDirection"><option value="inflow" ${a.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${a.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Amount RSD</label><input id="adjAmount" type="number" step="0.01" value="${Number(a.amount_rsd_equivalent || 0)}"></div><div class="field"><label>Mapped category</label><input id="adjCategory" value="${esc(a.suggested_category || c.affected_report_line || '')}"></div><div class="field"><label>Report group</label><input id="adjGroup" value="${esc(a.report_group || '')}"></div><div class="field"><label>Description</label><input id="adjDesc" value="${esc(a.description || i.description || '')}"></div></div></div>${val ? `<div class="source-box"><strong>Original validation:</strong><br>${esc(val.check_name)}<br>Expected: ${esc(val.expected_value)}<br>Actual: ${esc(val.actual_value)}<br>Difference: ${esc(val.difference)}<br>${esc(val.explanation || '')}</div>` : ''}</div>`;
+}
+function accountantButtons() {
+  return [
+    '<button class="btn" onclick="saveDecision(\'in_review\')">Mark in review</button>',
+    '<button class="btn warn" onclick="saveDecision(\'needs_owner_clarification\')">Ask owner / clarification needed</button>',
+    '<button class="btn purpleBtn" onclick="saveDecision(\'management_ready\')">Accept for management analysis</button>',
+    '<button class="btn warn" onclick="saveDecision(\'needs_accountant_review\')">Needs accountant review</button>',
+    '<button class="btn good" onclick="saveDecision(\'accountant_certified\')">Accountant certify item</button>',
+    '<button class="btn bad" onclick="saveDecision(\'rejected\')">Reject / exclude</button>',
+    '<button class="btn primary" onclick="saveDecision(\'management_ready\', true)">Save + open next</button>'
+  ].join('');
+}
+function ownerButtons() {
+  return [
+    '<button class="btn primary" onclick="saveDecision(\'owner_reviewed\')">Owner reviewed / answer sent</button>',
+    '<button class="btn warn" onclick="saveDecision(\'needs_accountant_review\')">Not sure - accountant review needed</button>',
+    '<button class="btn bad" onclick="saveDecision(\'escalated\')">Flag as incorrect / urgent</button>'
+  ].join('');
+}
+function closeModal() { document.getElementById('reviewModal').classList.remove('open'); currentId = null; }
+function readControlForm() {
+  const id = document.getElementById('ctrlIssueId')?.value; if (!id) return null;
+  return { kind: 'control', review_item_id: id, review_area: document.getElementById('ctrlArea').value, accounting_treatment: document.getElementById('ctrlTreatment').value, affected_report_line: document.getElementById('ctrlAffectedLine').value, trusted_source: document.getElementById('ctrlTrustedSource').value, expected_value: document.getElementById('ctrlExpected').value, actual_value: document.getElementById('ctrlActual').value, difference_amount: Number(document.getElementById('ctrlDifference').value || 0), corrected_amount_rsd: Number(document.getElementById('ctrlCorrectedAmount').value || 0), root_cause: document.getElementById('ctrlRootCause').value, corrective_action: document.getElementById('ctrlCorrectiveAction').value, create_adjustment: document.getElementById('ctrlCreateAdjustment').checked, adjustment: { date: document.getElementById('adjDate').value, direction: document.getElementById('adjDirection').value, amount_rsd_equivalent: Number(document.getElementById('adjAmount').value || 0), suggested_category: document.getElementById('adjCategory').value, report_group: document.getElementById('adjGroup').value, description: document.getElementById('adjDesc').value } };
+}
+function readForm() {
+  const id = document.getElementById('txId')?.value;
+  if (id) return { kind: 'transaction', transaction_id: id, date: document.getElementById('txDate').value, direction: document.getElementById('txDirection').value, payment_method: document.getElementById('txPayment').value, currency_original: document.getElementById('txCurrency').value, amount_rsd_equivalent: Number(document.getElementById('txAmount').value || 0), raw_category: document.getElementById('txRaw').value, suggested_category: document.getElementById('txCat').value, report_group: document.getElementById('txGroup').value, counterparty_type: document.getElementById('txCpType').value, counterparty: document.getElementById('txCp').value, description: document.getElementById('txDesc').value };
+  return readControlForm();
+}
+function resolutionType(status, form) {
+  if (status === 'owner_reviewed') return 'owner_context_confirmed';
+  if (status === 'management_ready') return form?.kind === 'control' ? 'control_resolved_for_management_analysis' : 'accepted_for_management_analysis';
+  if (status === 'needs_owner_clarification') return 'sent_to_owner_for_clarification';
+  if (status === 'needs_accountant_review') return 'requires_accountant_review';
+  if (status === 'accountant_certified') return form?.kind === 'control' ? 'accountant_certified_control_issue' : 'accountant_certified_transaction';
+  if (status === 'rejected') return 'rejected_excluded_from_import';
+  if (status === 'escalated') return 'escalated';
+  return 'marked_in_review';
+}
+function saveDecision(status, next = false) {
+  captureReviewUI();
+  const i = itemById(currentId), tx = txById(i.related_object_id), before = tx ? effTx(tx) : { review_item: i, validation: valById(i.related_object_id), existing_control: STATE.controlOverrides[i.review_item_id] || null };
+  const form = readForm(), reviewer = document.getElementById('reviewerName')?.value || (role() === 'owner' ? 'Business Owner' : 'Accountant Reviewer'), note = document.getElementById('reviewNote')?.value || '', ownerQuestion = document.getElementById('ownerQuestion')?.value || '';
+  if (form?.kind === 'transaction' && tx) {
+    const over = { ...form }; delete over.kind;
+    over.review_status = statusLabel(status);
+    if (status === 'rejected') over.excluded = true;
+    STATE.txOverrides[tx.transaction_id] = over;
+    if (document.getElementById('createMappingRule')?.checked && status !== 'rejected') {
+      STATE.mappingRules.push({ mapping_rule_id: `LOCAL-MAP-${Date.now()}`, period: 'ALL', direction: form.direction, raw_category: form.raw_category, suggested_category: form.suggested_category, report_group: form.report_group, created_from_review_item_id: i.review_item_id, reviewer, created_at: now() });
+    }
+  } else if (form?.kind === 'control') {
+    const control = { ...form }; delete control.kind; delete control.adjustment;
+    control.updated_at = now(); control.reviewer = reviewer;
+    STATE.controlOverrides[i.review_item_id] = control;
+    if (form.create_adjustment && Number(form.adjustment.amount_rsd_equivalent || 0) !== 0 && !['rejected', 'escalated', 'needs_owner_clarification'].includes(status)) {
+      STATE.manualAdjustments[i.review_item_id] = { transaction_id: `ADJ-${i.review_item_id}`, review_item_id: i.review_item_id, period: i.period, date: form.adjustment.date, direction: form.adjustment.direction, payment_method: 'manual_adjustment', currency_original: 'RSD', amount_rsd_equivalent: Number(form.adjustment.amount_rsd_equivalent || 0), raw_category: 'Manual control adjustment', suggested_category: form.adjustment.suggested_category, report_group: form.adjustment.report_group, counterparty_type: 'internal_review', counterparty: 'CONTROL_REVIEW', description: form.adjustment.description || `Manual adjustment from ${i.review_item_id}`, source_reference: i.source_reference || 'Manual control review', review_status: 'Manual adjustment - local review' };
+    } else {
+      delete STATE.manualAdjustments[i.review_item_id];
+    }
+  }
+
+  if (status === 'needs_owner_clarification') {
+    STATE.clarificationTasks[i.review_item_id] = { task_id: `TASK-${i.review_item_id}`, period: i.period, review_item_id: i.review_item_id, status: 'open', question: ownerQuestion || i.suggested_action || i.description, asked_by: reviewer, asked_at: now(), owner_answer: taskFor(i.review_item_id)?.owner_answer || '' };
+  } else if (status === 'owner_reviewed') {
+    const existing = taskFor(i.review_item_id) || { task_id: `TASK-${i.review_item_id}`, period: i.period, review_item_id: i.review_item_id };
+    STATE.clarificationTasks[i.review_item_id] = { ...existing, status: 'answered', owner_answer: note, answered_by: reviewer, answered_at: now() };
+  } else if (['management_ready', 'accountant_certified', 'rejected'].includes(status) && STATE.clarificationTasks[i.review_item_id]) {
+    STATE.clarificationTasks[i.review_item_id].status = 'closed';
+    STATE.clarificationTasks[i.review_item_id].closed_by = reviewer;
+    STATE.clarificationTasks[i.review_item_id].closed_at = now();
+  }
+
+  STATE.decisions[i.review_item_id] = {
+    review_item_id: i.review_item_id,
+    period: i.period,
+    status,
+    resolution_type: resolutionType(status, form),
+    role: role(),
+    review_area: generalIssueType(i),
+    reviewer,
+    note,
+    owner_question: ownerQuestion,
+    decided_at: now(),
+    before,
+    after: form || { review_item_status: status },
+    source_reference: i.source_reference,
+    related_object_id: i.related_object_id,
+    management_analysis_status: ['owner_reviewed', 'management_ready', 'needs_accountant_review', 'accountant_certified'].includes(status) ? 'usable_with_limitations' : status === 'rejected' ? 'excluded' : 'not_ready',
+    accountant_review_status: status === 'accountant_certified' ? 'certified' : ['needs_accountant_review', 'owner_reviewed', 'management_ready'].includes(status) ? 'pending_or_reviewed' : status,
+    formal_reporting_status: status === 'accountant_certified' ? 'accountant_certified' : status === 'rejected' ? 'excluded' : 'not_certified'
+  };
+  audit('review_decision_saved', { review_item_id: i.review_item_id, period: i.period, status, role: role(), reviewer });
+  const ui = { ...REVIEW_UI };
+  saveState();
+  renderAll();
+  restoreReviewScroll();
+  setActiveSection(role() === 'owner' ? 'shared' : 'review');
+  if (next) { const n = nextMatchingReviewItem(i.review_item_id); n ? openModal(n.review_item_id) : closeModal(); } else closeModal();
+}
+
+function markMonthManagementReady() {
+  if (selected === 'ALL') return alert('Choose one month first.');
+  const s = stats(selected);
+  if (s.management_blocking > 0) return alert(`${s.management_blocking} management blocker(s) remain. Resolve or send them to the correct workflow first.`);
+  STATE.batchStatuses[selected] = { ...(STATE.batchStatuses[selected] || {}), management_ready: true, management_ready_by: 'Accountant Reviewer', management_ready_at: now(), local_quality_score: localQuality(selected) };
+  audit('month_marked_management_ready', { period: selected });
+  saveState(); renderAll(); alert(`${month().label} marked management-ready.`);
+}
+function certifyMonthAccountant() {
+  if (selected === 'ALL') return alert('Choose one month first.');
+  const s = stats(selected);
+  if (s.formal_blocking > 0) return alert(`${s.formal_blocking} item(s) still need accountant certification or rejection before formal certification.`);
+  STATE.batchStatuses[selected] = { ...(STATE.batchStatuses[selected] || {}), management_ready: true, management_ready_by: STATE.batchStatuses[selected]?.management_ready_by || 'Accountant Reviewer', management_ready_at: STATE.batchStatuses[selected]?.management_ready_at || now(), accountant_certified: true, accountant_certified_by: 'Accountant Reviewer', accountant_certified_at: now(), local_quality_score: localQuality(selected) };
+  audit('month_accountant_certified', { period: selected });
+  saveState(); renderAll(); alert(`${month().label} accountant-certified locally.`);
+}
+
+function exportObj() {
+  return { exported_at: now(), app: 'Ask Your Business Simplified Owner + Accountant Operations Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+}
+function accountantPackObj() {
+  return { exported_at: now(), pack_type: 'Accountant Review Pack', version: APP_VERSION, company_code: DATA.company_code, selected_scope: selected, purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+}
+function download(name, obj) { const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+function exportPackage() { download(`certified_import_package_${new Date().toISOString().slice(0, 10)}.json`, exportObj()); }
+function exportAccountantPack() { download(`accountant_review_pack_${new Date().toISOString().slice(0, 10)}.json`, accountantPackObj()); }
+function exportState() { download(`review_decisions_${new Date().toISOString().slice(0, 10)}.json`, STATE); }
+function resetProgress() { if (confirm('Reset all local decisions, edits, clarification tasks, and batch statuses in this browser?')) { STATE = blankState(); saveState(); renderAll(); } }
+
+window.setRole = setRole;
+window.setActiveSection = setActiveSection;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.saveDecision = saveDecision;
+window.exportPackage = exportPackage;
+window.exportAccountantPack = exportAccountantPack;
+window.exportState = exportState;
+window.resetProgress = resetProgress;
+window.markMonthManagementReady = markMonthManagementReady;
+window.certifyMonthAccountant = certifyMonthAccountant;
+window.setReviewFilter = setReviewFilter;
+window.bulkSetFiltered = bulkSetFiltered;
+window.ask = ask;
+window.renderReviewTable = renderReviewTable;
+window.renderTxTable = renderTxTable;
+
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => setActiveSection(b.dataset.section));
+fetch('/data/university_mar_apr_may_import_data.json')
+  .then(r => r.json())
+  .then(d => {
+    DATA = d;
+    loadState();
+    const sel = document.getElementById('monthSelect');
+    sel.innerHTML = '<option value="ALL">All months combined</option>' + d.months.map(m => `<option value="${m.period}">${m.label}</option>`).join('');
+    sel.onchange = () => { selected = sel.value; renderAll(); };
+    renderAll();
+    setActiveSection(role() === 'owner' ? 'owner' : 'accountant');
+  })
+  .catch(e => { document.getElementById('owner').innerHTML = `<div class="card"><h2>Data load error</h2><p>${esc(e.message)}</p></div>`; });
