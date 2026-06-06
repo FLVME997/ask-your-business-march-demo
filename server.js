@@ -18,7 +18,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (url.pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, app: 'Ask Your Business Source Evidence Review Demo', version: '0.8.0' }));
+    res.end(JSON.stringify({ ok: true, app: 'Ask Your Business Smart Category Review Demo', version: '0.9.0' }));
     return;
   }
   const decodedPath = decodeURIComponent(url.pathname);
@@ -30,4 +30,4 @@ const server = http.createServer((req, res) => {
     res.end(data);
   });
 });
-server.listen(PORT, '0.0.0.0', () => console.log(`Ask Your Business v0.8 server running on ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`Ask Your Business v0.9 server running on ${PORT}`));

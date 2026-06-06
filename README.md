@@ -1,22 +1,27 @@
-# Ask Your Business - Source Evidence Review v0.8
+# Ask Your Business - Smart Category Suggestions v0.9
 
-This Railway demo adds a source evidence viewer inside the Review Center popup.
+This Railway demo adds reusable mapped-category suggestions inside the Review Center popup.
 
-## New in v0.8
+## New in v0.9
 
-- When you click a Needs Review line, the popup now shows a Source Evidence Viewer.
-- Shows the original workbook name, month, sheet, row/cell reference, and source reference.
-- Shows the normalized/imported transaction or validation/control record created by the app.
-- Shows source rows near the referenced sheet/row, sorted by sheet and row.
-- Shows daily balance controls and monthly status rows from the generated review documents.
-- Includes buttons to open the PDF report and download the generated review workbook.
+- The **Mapped / management category** field now has a dropdown sourced from previous mappings, transactions, mapping rules, and manually added categories.
+- You can still type a brand-new category manually.
+- New typed categories are remembered locally after you save/certify the review item.
+- The Mapping tab now shows the current mapped-category suggestion dictionary.
+- Validation/control issues and manual adjustment categories use the same suggestion library.
+- The v0.8 source evidence viewer remains available in the popup.
 
 ## Important demo limitation
 
-The raw original Excel workbooks are not bundled in this public Railway demo because they can contain sensitive company/personal data. The app shows workbook locator information and extracted source evidence. In production, this same panel will open the secured original file from private storage.
+Review decisions and new categories are saved in browser localStorage for now. Export the certified package or accountant review pack before clearing browser data. Later, this will move into PostgreSQL.
 
 ## Deploy
 
 Upload the contents of this folder to the root of the existing GitHub repository connected to Railway.
 
-Check `/health` after deployment. It should show version `0.8.0`.
+Check `/health` after deployment. It should show version `0.9.0`.
+
+
+## v0.9 mapped-category suggestions
+
+The Review Center mapped-category fields now use dropdown/autocomplete suggestions from previous imports, seed categories, approved mapping rules, local transaction edits, manual adjustments, and manually typed categories. Reviewers can still type a new category; once they save/certify the item, the category is stored in browser local storage and appears in future dropdown suggestions and in the Mapping tab.

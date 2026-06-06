@@ -1,1 +1,1 @@
-{"scripts":{"start":"node server.js"},"dependencies":{},"devDependencies":{},"engines":{"node":">=18"},"name":"ask-your-business-source-evidence-review-demo"}
+{"scripts":{"start":"node server.js"},"dependencies":{},"devDependencies":{},"engines":{"node":">=18"},"name":"ask-your-business-category-suggestions-review-demo"}
