@@ -4,7 +4,7 @@ let selected = 'ALL';
 let currentId = null;
 let REVIEW_UI = { q: '', status: 'needs_review', severity: '', area: '', scrollTop: 0, scrollLeft: 0 };
 const LS_KEY = 'ayb_owner_accountant_portal_v08';
-const APP_VERSION = '0.9.0';
+const APP_VERSION = '1.0.0';
 
 const MONTH_ASSETS = {
   '2020-03': { original_file_name: '31 03 2020.xlsx', review_workbook: '/review-workbooks/University_March_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_March_2020_Import_Review_Report.pdf' },
@@ -39,117 +39,22 @@ function blankState() {
     controlOverrides: {},
     manualAdjustments: {},
     mappingRules: [],
+    categorySuggestions: [],
+    reportGroupSuggestions: [],
     batchStatuses: {},
     clarificationTasks: {},
-    auditEvents: [],
-    customCategories: []
+    auditEvents: []
   };
 }
 function loadState() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) STATE = { ...blankState(), ...JSON.parse(raw) };
+    STATE.categorySuggestions = STATE.categorySuggestions || [];
+    STATE.reportGroupSuggestions = STATE.reportGroupSuggestions || [];
   } catch (e) { console.warn(e); }
 }
 function saveState() { localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
-
-
-const CATEGORY_SEED = [
-  'Tuition instalment revenue',
-  'Academic renewal revenue',
-  'Exam fees',
-  'Library / books / copying revenue',
-  'Cafe/bar revenue',
-  'ATM / bankomat income',
-  'Cash surplus / difference',
-  'Currency conversion / FX movement',
-  'Salaries and wages',
-  'Payroll contributions',
-  'Bank fees / financial services',
-  'Owner / related-party payment',
-  'Owner / founder payment',
-  'Taxes / government fees',
-  'Internet and phone',
-  'Utilities / communal services',
-  'Fuel / electricity / utilities',
-  'Maintenance services',
-  'Office supplies',
-  'Cafe/bar inventory',
-  'External services',
-  'Legal / professional services',
-  'Legal dispute / settlement',
-  'Debt / loan / repayment item',
-  'Transport costs',
-  'Taxi / postage / courier',
-  'University membership fee',
-  'Marketing / bookkeeping / professional services',
-  'Expert witness / professional services',
-  'Financial result adjustment',
-  'Manual adjustment',
-  'Unmapped / needs accountant review'
-];
-function cleanCat(v) { return String(v || '').trim().replace(/\s+/g, ' '); }
-function addCategoryToMap(map, value, source = 'suggestion') {
-  const name = cleanCat(value);
-  if (!name || ['undefined','null','nan','none'].includes(name.toLowerCase())) return;
-  const key = name.toLowerCase();
-  if (!map.has(key)) map.set(key, { name, sources: new Set() });
-  map.get(key).sources.add(source);
-}
-function categoryCatalogObjects() {
-  const map = new Map();
-  CATEGORY_SEED.forEach(c => addCategoryToMap(map, c, 'seed dictionary'));
-  if (DATA?.months) DATA.months.forEach(m => {
-    (m.mapping_suggestions || []).forEach(x => addCategoryToMap(map, x.suggested_category, 'original mapping suggestion'));
-    (m.transactions || []).forEach(t => addCategoryToMap(map, t.suggested_category, 'imported transaction'));
-  });
-  (STATE.mappingRules || []).forEach(r => addCategoryToMap(map, r.suggested_category, 'approved mapping rule'));
-  Object.values(STATE.txOverrides || {}).forEach(t => addCategoryToMap(map, t.suggested_category, 'local transaction edit'));
-  Object.values(STATE.manualAdjustments || {}).forEach(a => addCategoryToMap(map, a.suggested_category, 'manual adjustment'));
-  Object.values(STATE.controlOverrides || {}).forEach(c => addCategoryToMap(map, c.affected_report_line, 'control resolution'));
-  (STATE.customCategories || []).forEach(c => addCategoryToMap(map, typeof c === 'string' ? c : c.name, 'manually added'));
-  return Array.from(map.values()).map(x => ({ name: x.name, sources: Array.from(x.sources).join(', ') })).sort((a,b) => a.name.localeCompare(b.name));
-}
-function categoryCatalog() { return categoryCatalogObjects().map(x => x.name); }
-function categoryExists(name) { const key = cleanCat(name).toLowerCase(); return !!key && categoryCatalog().some(c => c.toLowerCase() === key); }
-function categorySourceFor(name) { const key = cleanCat(name).toLowerCase(); const obj = categoryCatalogObjects().find(x => x.name.toLowerCase() === key); return obj ? obj.sources : ''; }
-function categoryDatalistHtml() { return `<datalist id="mappedCategorySuggestions">${categoryCatalog().map(c => `<option value="${esc(c)}"></option>`).join('')}</datalist>`; }
-function categoryInputHelp(id) { return `<div id="${esc(id)}Help" class="category-hint">Select an existing category from the dropdown, or type a new category. New categories are saved after you save/certify.</div>`; }
-function onCategoryInput(id) {
-  const input = document.getElementById(id), help = document.getElementById(`${id}Help`);
-  if (!input || !help) return;
-  const v = cleanCat(input.value);
-  if (!v) { help.textContent = 'Select an existing category from the dropdown, or type a new category. New categories are saved after you save/certify.'; help.className = 'category-hint'; return; }
-  if (categoryExists(v)) { help.textContent = `Existing category suggestion${categorySourceFor(v) ? ` • ${categorySourceFor(v)}` : ''}`; help.className = 'category-hint exists'; }
-  else { help.textContent = 'New category — it will be added to future suggestions when you save/certify this item.'; help.className = 'category-hint new'; }
-}
-function categoryField(id, value = '', label = 'Mapped category') {
-  return `<label>${esc(label)}</label><input id="${esc(id)}" list="mappedCategorySuggestions" value="${esc(value || '')}" placeholder="Choose existing or type new category" oninput="onCategoryInput('${esc(id)}')" onfocus="onCategoryInput('${esc(id)}')">${categoryInputHelp(id)}`;
-}
-function rememberCategory(value, source = 'manual entry', reviewItemId = '', reviewer = '') {
-  const name = cleanCat(value);
-  if (!name || categoryExists(name)) return false;
-  STATE.customCategories = STATE.customCategories || [];
-  STATE.customCategories.push({ category_id: `LOCAL-CAT-${Date.now()}-${STATE.customCategories.length + 1}`, name, source, review_item_id: reviewItemId, reviewer, created_at: now(), use_count: 1 });
-  audit('custom_category_added', { name, source, review_item_id: reviewItemId, reviewer });
-  return true;
-}
-function rememberReportGroup(value, source = 'manual entry') {
-  const name = cleanCat(value);
-  if (!name) return false;
-  // Report-group persistence is intentionally light in the browser demo.
-  // In PostgreSQL, this becomes a company-level report group dictionary.
-  audit('report_group_seen', { name, source });
-  return true;
-}
-function categorySuggestionCards(limit = 16) {
-  const items = categoryCatalogObjects().slice(0, limit).map(c => `<button class="category-chip" type="button" onclick="copyCategoryToActiveField('${esc(c.name)}')">${esc(c.name)}</button>`).join('');
-  return `<div class="category-suggestions"><div class="mini"><strong>Known category suggestions</strong> — click a common option or use the dropdown field above. New typed categories will be remembered locally.</div><div class="category-chip-wrap">${items}</div></div>`;
-}
-function copyCategoryToActiveField(v) {
-  const el = document.activeElement?.id && ['txCat','adjCategory','ctrlAffectedLine'].includes(document.activeElement.id) ? document.activeElement : (document.getElementById('txCat') || document.getElementById('adjCategory') || document.getElementById('ctrlAffectedLine'));
-  if (el) { el.value = v; onCategoryInput(el.id); el.focus(); }
-}
 
 function cls(s) {
   s = String(s || '').toLowerCase();
@@ -171,8 +76,8 @@ function setRole(r) {
   setActiveSection(r === 'owner' ? 'owner' : 'accountant');
 }
 function allowedTabs() {
-  if (role() === 'owner') return ['owner', 'shared', 'assistant', 'reports'];
-  return ['accountant', 'review', 'transactions', 'mapping', 'validation', 'certification', 'shared', 'reports'];
+  if (role() === 'owner') return ['owner', 'certified', 'shared', 'assistant', 'reports'];
+  return ['accountant', 'certified', 'review', 'transactions', 'mapping', 'validation', 'certification', 'shared', 'reports'];
 }
 function activeSection() { return document.querySelector('.section.active')?.id || (role() === 'owner' ? 'owner' : 'accountant'); }
 function setActiveSection(id) {
@@ -212,6 +117,123 @@ function generalIssueType(i) {
   return 'Other';
 }
 function generalOptions(v = '') { return ['Validation / control', 'Mapping / category', 'Transaction review', 'Source structure', 'Other'].map(o => `<option value="${esc(o)}" ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join(''); }
+
+
+const DEFAULT_MAPPED_CATEGORIES = [
+  'Tuition instalment revenue',
+  'Academic renewal revenue',
+  'Exam fees',
+  'Library/copying revenue',
+  'Cafe/bar revenue',
+  'ATM rental income',
+  'Cash surplus / difference',
+  'Currency conversion / FX movement',
+  'Salaries and wages',
+  'Payroll contributions',
+  'Bank fees / financial services',
+  'Internet and phone',
+  'Utilities / communal services',
+  'Fuel / electricity / utilities',
+  'Maintenance services',
+  'Office supplies',
+  'Cafe/bar inventory',
+  'External services',
+  'Legal / professional services',
+  'Legal dispute / settlement',
+  'Owner / related-party payment',
+  'Taxes / government fees',
+  'Transport costs',
+  'Taxi / postage / courier',
+  'University membership fee',
+  'Marketing / bookkeeping / professional services',
+  'Expert witness / professional services',
+  'Unmapped / needs accountant review',
+  'Manual control adjustment',
+  'Financial result adjustment'
+];
+const DEFAULT_REPORT_GROUPS = [
+  'Operating revenue',
+  'Other operating revenue',
+  'Operating expense',
+  'Financial income',
+  'Financial expense',
+  'Financial activity',
+  'Non-operating income',
+  'Non-operating expense',
+  'Owner / related-party movement',
+  'Manual adjustment',
+  'Unmapped / needs accountant review'
+];
+function normalizeSuggestion(v) {
+  return String(v || '').trim().replace(/\s+/g, ' ');
+}
+function uniqueSorted(values) {
+  const seen = new Set();
+  return values.map(normalizeSuggestion).filter(Boolean).filter(v => {
+    const key = v.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+function readSuggestionValue(v, type = 'category') {
+  if (typeof v === 'string') return v;
+  if (!v) return '';
+  return type === 'report_group' ? (v.group || v.name || v.report_group || '') : (v.category || v.name || v.suggested_category || '');
+}
+function categorySuggestions() {
+  const vals = [...DEFAULT_MAPPED_CATEGORIES];
+  (DATA?.months || []).forEach(m => {
+    (m.mapping_suggestions || []).forEach(x => vals.push(x.suggested_category));
+    (m.transactions || []).forEach(t => vals.push(t.suggested_category));
+  });
+  Object.values(STATE.txOverrides || {}).forEach(t => vals.push(t.suggested_category));
+  Object.values(STATE.manualAdjustments || {}).forEach(t => vals.push(t.suggested_category));
+  Object.values(STATE.controlOverrides || {}).forEach(c => vals.push(c.affected_report_line));
+  (STATE.mappingRules || []).forEach(r => vals.push(r.suggested_category));
+  (STATE.categorySuggestions || []).forEach(v => vals.push(readSuggestionValue(v, 'category')));
+  return uniqueSorted(vals);
+}
+function reportGroupSuggestions() {
+  const vals = [...DEFAULT_REPORT_GROUPS];
+  (DATA?.months || []).forEach(m => {
+    (m.mapping_suggestions || []).forEach(x => vals.push(x.report_group));
+    (m.transactions || []).forEach(t => vals.push(t.report_group));
+  });
+  Object.values(STATE.txOverrides || {}).forEach(t => vals.push(t.report_group));
+  Object.values(STATE.manualAdjustments || {}).forEach(t => vals.push(t.report_group));
+  (STATE.mappingRules || []).forEach(r => vals.push(r.report_group));
+  (STATE.reportGroupSuggestions || []).forEach(v => vals.push(readSuggestionValue(v, 'report_group')));
+  return uniqueSorted(vals);
+}
+function addLocalSuggestion(value, type = 'category', meta = {}) {
+  const clean = normalizeSuggestion(value);
+  if (!clean) return false;
+  const all = type === 'report_group' ? reportGroupSuggestions() : categorySuggestions();
+  if (all.some(x => x.toLowerCase() === clean.toLowerCase())) return false;
+  if (type === 'report_group') {
+    STATE.reportGroupSuggestions = STATE.reportGroupSuggestions || [];
+    STATE.reportGroupSuggestions.push({ group: clean, created_at: now(), ...meta });
+  } else {
+    STATE.categorySuggestions = STATE.categorySuggestions || [];
+    STATE.categorySuggestions.push({ category: clean, created_at: now(), ...meta });
+  }
+  audit(type === 'report_group' ? 'report_group_suggestion_added' : 'mapped_category_suggestion_added', { value: clean, ...meta });
+  return true;
+}
+function suggestionDatalists() {
+  return `<datalist id="mappedCategorySuggestions">${categorySuggestions().map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist><datalist id="reportGroupSuggestions">${reportGroupSuggestions().map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`;
+}
+function categoryInput(id, label, value, placeholder = 'Select existing or type a new category') {
+  return `<div class="field"><label>${esc(label)}</label><input id="${esc(id)}" list="mappedCategorySuggestions" value="${esc(value || '')}" placeholder="${esc(placeholder)}"><div class="mini">Choose an existing suggestion or type a new category. New saved categories appear in this dropdown for future review items.</div></div>`;
+}
+function reportGroupInput(id, label, value, placeholder = 'Select existing or type a new report group') {
+  return `<div class="field"><label>${esc(label)}</label><input id="${esc(id)}" list="reportGroupSuggestions" value="${esc(value || '')}" placeholder="${esc(placeholder)}"><div class="mini">Report group suggestions are learned from previous mappings and manual entries.</div></div>`;
+}
+function categorySuggestionRows() {
+  const localSet = new Set((STATE.categorySuggestions || []).map(x => normalizeSuggestion(readSuggestionValue(x, 'category')).toLowerCase()));
+  return categorySuggestions().map(c => ({ category: c, source: localSet.has(c.toLowerCase()) ? 'Added locally during review' : 'Template/import/default suggestion' }));
+}
 
 function stats(period = selected) {
   const items = period === 'ALL' ? allItems() : allItems().filter(i => i.period === period);
@@ -283,6 +305,86 @@ function adjSummary(period = selected) {
   const outflows = tx.filter(t => t.direction === 'outflow').reduce((a, t) => a + Number(t.amount_rsd_equivalent || 0), 0);
   const opening = period === 'ALL' ? DATA.portfolio_summary.opening_position : months[0].summary.opening_position;
   return { opening, inflows, outflows, net: inflows - outflows, closing: Number(opening || 0) + inflows - outflows, rows: tx.length };
+}
+
+function linkedReviewItemsForTx(txId) {
+  return allItems().filter(i => String(i.related_object_id || '') === String(txId || ''));
+}
+function dataReadinessForTx(t) {
+  const linked = linkedReviewItemsForTx(t.transaction_id);
+  const statuses = linked.map(itemStatus);
+  const batch = batchStatus(t.period);
+  if (t.excluded || statuses.includes('rejected')) return { key: 'excluded', label: 'Rejected / excluded', tone: 'bad', management: false, accounting: false, detail: 'Excluded during review.' };
+  if (statuses.some(s => ['needs_review', 'in_review', 'needs_owner_clarification', 'escalated'].includes(s))) return { key: 'not_ready', label: 'Needs review', tone: 'warn', management: false, accounting: false, detail: 'Has unresolved review item(s).' };
+  if (batch.accountant_certified || (linked.length && statuses.every(s => s === 'accountant_certified'))) return { key: 'accounting_certified', label: 'Accountant-certified', tone: 'good', management: true, accounting: true, detail: 'Formal accounting review recorded.' };
+  if (statuses.includes('accountant_certified')) return { key: 'partly_certified', label: 'Partly accountant-certified', tone: 'purple', management: true, accounting: false, detail: 'Some linked items are accountant-certified, but period certification is not complete.' };
+  if (statuses.some(s => ['management_ready', 'owner_reviewed', 'needs_accountant_review'].includes(s)) || batch.management_ready) return { key: 'management_ready', label: 'Management-ready', tone: 'purple', management: true, accounting: false, detail: 'Usable for owner/business analysis with accountant-certification limitation.' };
+  if (!linked.length) return { key: 'auto_prepared', label: 'System-prepared', tone: 'info', management: true, accounting: false, detail: 'No exception was raised for this row. Accounting certification still depends on period status.' };
+  return { key: 'not_ready', label: 'Needs review', tone: 'warn', management: false, accounting: false, detail: 'Review status derived from linked issue(s).' };
+}
+function certifiedRows(period = selected) {
+  return displayTxRows(period).map(t => {
+    const e = effTx(t);
+    return { ...e, readiness: dataReadinessForTx(e), linked_review_items: linkedReviewItemsForTx(e.transaction_id) };
+  });
+}
+function sourceMonthsFor(period = selected) { return period === 'ALL' ? DATA.months : [monthByPeriod(period)]; }
+function certifiedSummary(period = selected) {
+  const rows = certifiedRows(period);
+  const sourceMonths = sourceMonthsFor(period).filter(Boolean);
+  const original = {
+    opening: period === 'ALL' ? DATA.portfolio_summary.opening_position : sourceMonths[0]?.summary?.opening_position,
+    inflows: sourceMonths.reduce((a,m)=>a+Number(m.summary.total_inflows||0),0),
+    outflows: sourceMonths.reduce((a,m)=>a+Number(m.summary.total_outflows||0),0),
+    net: sourceMonths.reduce((a,m)=>a+Number(m.summary.net_movement||0),0),
+    closing: period === 'ALL' ? DATA.portfolio_summary.closing_position : sourceMonths[0]?.summary?.closing_position,
+    rows: sourceMonths.reduce((a,m)=>a+Number(m.summary.transactions_extracted||0),0)
+  };
+  const managementRows = rows.filter(r => r.readiness.management && !r.excluded);
+  const accountingRows = rows.filter(r => r.readiness.accounting && !r.excluded);
+  const rejectedRows = rows.filter(r => r.readiness.key === 'excluded' || r.excluded);
+  const pendingRows = rows.filter(r => !r.readiness.management && r.readiness.key !== 'excluded');
+  const sumRows = rs => {
+    const inflows = rs.filter(t => t.direction === 'inflow').reduce((a,t)=>a+Number(t.amount_rsd_equivalent||0),0);
+    const outflows = rs.filter(t => t.direction === 'outflow').reduce((a,t)=>a+Number(t.amount_rsd_equivalent||0),0);
+    const opening = Number(original.opening || 0);
+    return { opening, inflows, outflows, net: inflows - outflows, closing: opening + inflows - outflows, rows: rs.length };
+  };
+  return { original, management: sumRows(managementRows), accounting: sumRows(accountingRows), rejectedRows, pendingRows, allRows: rows, managementRows, accountingRows, adjustments: manualAdjustmentRows(period) };
+}
+function categoryBreakdownRows(rows, limit = 12) {
+  const groups = {};
+  rows.filter(r => !r.excluded).forEach(t => {
+    const key = t.suggested_category || 'Unmapped';
+    groups[key] = groups[key] || { category: key, inflows: 0, outflows: 0, net: 0, rows: 0 };
+    const amt = Number(t.amount_rsd_equivalent || 0);
+    if (t.direction === 'inflow') groups[key].inflows += amt; else groups[key].outflows += amt;
+    groups[key].net += t.direction === 'inflow' ? amt : -amt;
+    groups[key].rows += 1;
+  });
+  return Object.values(groups).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)).slice(0, limit);
+}
+function beforeAfterRows(sum) {
+  const diff = (a,b) => Number(b||0) - Number(a||0);
+  return [
+    ['Rows', sum.original.rows, sum.management.rows, diff(sum.original.rows, sum.management.rows)],
+    ['Inflows', money(sum.original.inflows), money(sum.management.inflows), money(diff(sum.original.inflows, sum.management.inflows))],
+    ['Outflows', money(sum.original.outflows), money(sum.management.outflows), money(diff(sum.original.outflows, sum.management.outflows))],
+    ['Net movement', money(sum.original.net), money(sum.management.net), money(diff(sum.original.net, sum.management.net))],
+    ['Closing cash', money(sum.original.closing), money(sum.management.closing), money(diff(sum.original.closing, sum.management.closing))]
+  ].map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`);
+}
+function certificationLimitations(period = selected) {
+  const st = stats(period), mg = managementStatus(period), fm = formalStatus(period), sum = certifiedSummary(period);
+  const limits = [];
+  if (st.management_blocking > 0) limits.push(`${st.management_blocking} item(s) still block management-ready status.`);
+  if (st.formal_blocking > 0) limits.push(`${st.formal_blocking} item(s) still need accountant-level certification or exclusion.`);
+  if (sum.pendingRows.length) limits.push(`${sum.pendingRows.length} transaction/control-linked row(s) remain outside management analysis.`);
+  if (sum.rejectedRows.length) limits.push(`${sum.rejectedRows.length} row(s) have been rejected/excluded from the certified view.`);
+  if (sum.adjustments.length) limits.push(`${sum.adjustments.length} manual adjustment(s) were created during review.`);
+  if (!limits.length && fm.tone === 'good') limits.push('No open review limitations for the selected scope based on the current browser-local state.');
+  else if (!limits.length) limits.push('No management blockers, but formal accountant period certification may still be pending.');
+  return { mg, fm, limits };
 }
 
 function taskFor(id) { return STATE.clarificationTasks[id] || null; }
@@ -419,6 +521,7 @@ function renderAll() {
   renderOwnerPortal();
   renderAccountantWorkbench();
   renderShared();
+  renderCertifiedData();
   renderReview();
   renderTx();
   renderMapping();
@@ -570,6 +673,47 @@ function renderShared() {
   document.querySelectorAll('[data-open-item]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.openItem)));
 }
 
+
+function renderCertifiedData() {
+  const sum = certifiedSummary();
+  const lim = certificationLimitations();
+  const scopeLabel = label();
+  const catRows = categoryBreakdownRows(sum.managementRows).map(g => `<tr><td>${esc(g.category)}</td><td>${g.rows}</td><td>${money(g.inflows)}</td><td>${money(g.outflows)}</td><td>${money(g.net)}</td></tr>`);
+  const adjRows = sum.adjustments.map(a => `<tr><td>${esc(a.period)}</td><td>${esc(a.transaction_id)}</td><td>${esc(a.date || '')}</td><td>${pill(a.direction || '')}</td><td>${money(a.amount_rsd_equivalent)}</td><td>${esc(a.suggested_category || '')}</td><td>${esc(a.description || '')}</td><td>${esc(a.review_item_id || '')}</td></tr>`);
+  const rejRows = sum.rejectedRows.slice(0, 100).map(t => `<tr><td>${esc(t.period)}</td><td>${esc(t.transaction_id)}</td><td>${esc(t.date || '')}</td><td>${money(t.amount_rsd_equivalent)}</td><td>${esc(t.raw_category || '')}</td><td>${esc(t.suggested_category || '')}</td><td>${esc(t.description || '')}</td><td>${t.linked_review_items.map(x=>esc(x.review_item_id)).join('<br>')}</td></tr>`);
+  const pendingRows = sum.pendingRows.slice(0, 100).map(t => `<tr class="clickable-row" data-open-tx="${esc(t.linked_review_items[0]?.review_item_id || '')}"><td>${esc(t.period)}</td><td>${esc(t.transaction_id)}</td><td>${pill(t.readiness.label, t.readiness.tone)}</td><td>${money(t.amount_rsd_equivalent)}</td><td>${esc(t.raw_category || '')}</td><td>${esc(t.suggested_category || '')}</td><td>${esc(t.description || '')}</td><td>${t.linked_review_items.map(x=>esc(x.review_item_id)).join('<br>')}</td></tr>`);
+  const certifiedRowsPreview = sum.managementRows.slice(0, 120).map(t => `<tr><td>${esc(t.period)}</td><td>${esc(t.transaction_id)}</td><td>${esc(t.date || '')}</td><td>${pill(t.readiness.label, t.readiness.tone)}</td><td>${pill(t.direction || '')}</td><td>${money(t.amount_rsd_equivalent)}</td><td>${esc(t.raw_category || '')}</td><td>${esc(t.suggested_category || '')}</td><td>${esc(t.report_group || '')}</td><td>${esc(t.source_reference || '')}</td></tr>`);
+  document.getElementById('certified').innerHTML = `
+    <div class="card certified-hero">
+      <div>
+        <div class="portal-tag">Certified data view • ${esc(scopeLabel)}</div>
+        <h2>What data is now usable?</h2>
+        <p class="muted">This tab separates the original extracted data from the current management-ready and accountant-certified layers. It uses your local review decisions, edits, manual adjustments, and rejected rows.</p>
+      </div>
+      <div class="owner-status-stack">${pill(lim.mg.label, lim.mg.tone)} ${pill(lim.fm.label, lim.fm.tone)}</div>
+    </div>
+    <div class="grid cards">
+      ${kpi('Management-ready rows', sum.management.rows, 'Rows usable for business/owner analysis', sum.management.rows ? 'pos' : 'warnText')}
+      ${kpi('Accounting-certified rows', sum.accounting.rows, 'Rows formally certified in current local state', sum.accounting.rows ? 'pos' : 'warnText')}
+      ${kpi('Rejected / excluded rows', sum.rejectedRows.length, 'Excluded from the certified view', sum.rejectedRows.length ? 'warnText' : 'pos')}
+      ${kpi('Manual adjustments', sum.adjustments.length, 'Created from review/control decisions', sum.adjustments.length ? 'purpleText' : 'pos')}
+    </div>
+    <div class="grid two">
+      <div class="card"><h2>Before vs after totals</h2><p class="muted">Original source totals compared with the current management-ready layer after local review edits, exclusions, and manual adjustments.</p>${table(['Metric','Original extracted','Management-ready current','Change'], beforeAfterRows(sum))}</div>
+      <div class="card"><h2>Remaining limitations</h2><p class="muted">These limitations are what the owner chatbot and dashboards should disclose.</p>${lim.limits.map(x=>`<div class="issue">${esc(x)}</div>`).join('')}</div>
+    </div>
+    <div class="card"><h2>Management-ready category breakdown</h2><p class="muted">This is the first analysis layer: grouped by mapped/management category, using only rows currently accepted for management use.</p>${catRows.length ? table(['Mapped category','Rows','Inflows','Outflows','Net'], catRows) : '<div class="notice">No management-ready rows yet.</div>'}</div>
+    <div class="grid two">
+      <div class="card"><h2>Manual adjustments created during review</h2>${adjRows.length ? table(['Period','ID','Date','Direction','Amount','Category','Description','Linked review item'], adjRows) : '<div class="notice oknotice">No manual adjustments have been created yet.</div>'}</div>
+      <div class="card"><h2>Rejected / excluded rows</h2>${rejRows.length ? table(['Period','ID','Date','Amount','Raw category','Mapped category','Description','Review item'], rejRows) : '<div class="notice oknotice">No rejected rows in this browser-local review state.</div>'}</div>
+    </div>
+    <div class="card"><h2>Rows still not ready for management analysis</h2><p class="muted">Click a row to open its linked review item and resolve it.</p>${pendingRows.length ? table(['Period','ID','Readiness','Amount','Raw category','Mapped category','Description','Review item'], pendingRows) : '<div class="notice oknotice">No pending management-blocking rows in this scope.</div>'}</div>
+    <div class="card"><h2>Management-ready transaction preview</h2><p class="muted">First 120 rows in the current management-ready layer. Full export is available through Export certified package.</p>${certifiedRowsPreview.length ? table(['Period','ID','Date','Readiness','Direction','Amount','Raw category','Mapped category','Report group','Source'], certifiedRowsPreview) : '<div class="notice">No management-ready rows yet.</div>'}</div>
+    <div class="toolbar"><button class="btn primary" onclick="exportPackage()">Export certified package</button><button class="btn good" onclick="exportManagementAnalysisPack()">Export management analysis pack</button><button class="btn" onclick="exportAccountantPack()">Export accountant review pack</button></div>
+  `;
+  document.querySelectorAll('[data-open-tx]').forEach(r => { if (r.dataset.openTx) r.addEventListener('click', () => openModal(r.dataset.openTx)); });
+}
+
 function captureReviewUI() {
   const q = document.getElementById('rq'), rs = document.getElementById('rs'), rv = document.getElementById('rv'), ra = document.getElementById('ra'), wrap = document.querySelector('#reviewTable .table-wrap');
   if (q) REVIEW_UI.q = q.value || '';
@@ -621,10 +765,10 @@ function renderTxTable() {
   document.getElementById('txTable').innerHTML = table(['Period', 'ID', 'Date', 'Direction', 'Method', 'Amount', 'Raw category', 'Mapped category', 'Report group', 'Description', 'Source', 'Status'], rows);
 }
 function renderMapping() {
-  const catRows = categoryCatalogObjects().map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.sources)}</td></tr>`);
   const rules = (STATE.mappingRules || []).map(r => `<tr><td>${esc(r.period || 'ALL')}</td><td>${pill(r.direction)}</td><td>${esc(r.raw_category)}</td><td>${esc(r.suggested_category)}</td><td>${esc(r.report_group)}</td><td>${esc(r.created_from_review_item_id)}</td><td>${esc(r.reviewer)}</td><td>${esc(r.created_at)}</td></tr>`);
   const base = scopeMonths().flatMap(m => m.mapping_suggestions).map(x => `<tr><td>${x.period}</td><td>${pill(x.direction)}</td><td>${esc(x.raw_category)}</td><td>${esc(x.suggested_category)}</td><td>${esc(x.report_group)}</td><td>${x.rows_affected}</td><td>${money(x.total_rsd_equivalent)}</td><td>${pill(x.confidence)}</td></tr>`);
-  document.getElementById('mapping').innerHTML = `<div class="card"><h2>Mapped category suggestion library</h2><p class="muted">These are the dropdown suggestions shown in the Review Center mapped-category fields. If you type a new category in the popup and save/certify it, it will be added here and reused later.</p>${table(['Mapped category suggestion', 'Source'], catRows)}</div><div class="card"><h2>Approved mapping rules created during review</h2>${rules.length ? table(['Period', 'Direction', 'Raw category', 'Mapped category', 'Report group', 'From item', 'Reviewer', 'Created'], rules) : '<div class="notice">No local mapping rules created yet.</div>'}</div><div class="card"><h2>Original mapping suggestions</h2>${table(['Period', 'Direction', 'Raw category', 'Suggested category', 'Report group', 'Rows', 'Total', 'Confidence'], base)}</div>`;
+  const suggestionRows = categorySuggestionRows().map(x => `<tr><td>${esc(x.category)}</td><td>${pill(x.source, x.source.includes('local') ? 'purple' : 'info')}</td></tr>`);
+  document.getElementById('mapping').innerHTML = `<div class="card"><h2>Mapped category dropdown suggestions</h2><p class="muted">These are the categories shown in the mapped-category dropdown inside the review popup. The list combines default categories, previous import mappings, normalized transactions, approved mapping rules, and new categories typed during review.</p>${table(['Mapped category suggestion', 'Source'], suggestionRows)}</div><div class="card"><h2>Approved mapping rules created during review</h2>${rules.length ? table(['Period', 'Direction', 'Raw category', 'Mapped category', 'Report group', 'From item', 'Reviewer', 'Created'], rules) : '<div class="notice">No local mapping rules created yet.</div>'}</div><div class="card"><h2>Original mapping suggestions</h2>${table(['Period', 'Direction', 'Raw category', 'Suggested category', 'Report group', 'Rows', 'Total', 'Confidence'], base)}</div>`;
 }
 function renderValidation() {
   const rows = scopeMonths().flatMap(m => m.validation_results).map(v => {
@@ -867,12 +1011,14 @@ function openModal(id) {
 }
 function transactionForm(i, tx) {
   const e = effTx(tx);
-  return `<div><h3>Editable transaction fields</h3><input type="hidden" id="txId" value="${esc(e.transaction_id)}">${categoryDatalistHtml()}${categorySuggestionCards()}<div class="field-grid"><div class="field"><label>Date</label><input id="txDate" value="${esc(e.date)}"></div><div class="field"><label>Direction</label><select id="txDirection"><option value="inflow" ${e.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${e.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Payment method</label><input id="txPayment" value="${esc(e.payment_method)}"></div><div class="field"><label>Currency</label><input id="txCurrency" value="${esc(e.currency_original)}"></div><div class="field"><label>Amount RSD equivalent</label><input id="txAmount" type="number" step="0.01" value="${Number(e.amount_rsd_equivalent || 0)}"></div><div class="field"><label>Raw category</label><input id="txRaw" value="${esc(e.raw_category)}"></div><div class="field">${categoryField('txCat', e.suggested_category, 'Mapped / management category')}</div><div class="field"><label>Report group</label><input id="txGroup" value="${esc(e.report_group)}"></div><div class="field"><label>Counterparty type</label><input id="txCpType" value="${esc(e.counterparty_type)}"></div><div class="field"><label>Counterparty token</label><input id="txCp" value="${esc(e.counterparty)}"></div><div class="field" style="grid-column:1/-1"><label>Description</label><textarea id="txDesc">${esc(e.description)}</textarea></div></div><label class="checkbox"><input type="checkbox" id="createMappingRule"><span>Create/update a reusable mapping rule from this row.</span></label></div>`;
+  const lists = suggestionDatalists();
+  return `<div><h3>Editable transaction fields</h3>${lists}<input type="hidden" id="txId" value="${esc(e.transaction_id)}"><div class="field-grid"><div class="field"><label>Date</label><input id="txDate" value="${esc(e.date)}"></div><div class="field"><label>Direction</label><select id="txDirection"><option value="inflow" ${e.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${e.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Payment method</label><input id="txPayment" value="${esc(e.payment_method)}"></div><div class="field"><label>Currency</label><input id="txCurrency" value="${esc(e.currency_original)}"></div><div class="field"><label>Amount RSD equivalent</label><input id="txAmount" type="number" step="0.01" value="${Number(e.amount_rsd_equivalent || 0)}"></div><div class="field"><label>Raw category</label><input id="txRaw" value="${esc(e.raw_category)}"></div>${categoryInput('txCat', 'Mapped / management category', e.suggested_category)}${reportGroupInput('txGroup', 'Report group', e.report_group)}<div class="field"><label>Counterparty type</label><input id="txCpType" value="${esc(e.counterparty_type)}"></div><div class="field"><label>Counterparty token</label><input id="txCp" value="${esc(e.counterparty)}"></div><div class="field" style="grid-column:1/-1"><label>Description</label><textarea id="txDesc">${esc(e.description)}</textarea></div></div><label class="checkbox"><input type="checkbox" id="createMappingRule"><span>Create/update a reusable mapping rule from this row. The mapped category is saved to suggestions even if this is not ticked.</span></label></div>`;
 }
 function controlForm(i) {
   const val = valById(i.related_object_id), c = STATE.controlOverrides[i.review_item_id] || {}, a = STATE.manualAdjustments[i.review_item_id] || {};
   const diff = (c.difference_amount ?? Number(val?.difference || 0)) || 0;
-  return `<div><h3>Editable validation / control issue</h3><input type="hidden" id="ctrlIssueId" value="${esc(i.review_item_id)}">${categoryDatalistHtml()}${categorySuggestionCards()}<div class="field-grid"><div class="field"><label>Review area</label><select id="ctrlArea">${generalOptions(c.review_area || generalIssueType(i))}</select></div><div class="field"><label>Trusted source</label><select id="ctrlTrustedSource"><option ${c.trusted_source === 'Daily extracted transactions' ? 'selected' : ''}>Daily extracted transactions</option><option ${c.trusted_source === 'Monthly status sheet' ? 'selected' : ''}>Monthly status sheet</option><option ${c.trusted_source === 'Manual accountant review' ? 'selected' : ''}>Manual accountant review</option><option ${c.trusted_source === 'Owner clarification' ? 'selected' : ''}>Owner clarification</option></select></div><div class="field"><label>Accounting treatment / provisional treatment</label><input id="ctrlTreatment" value="${esc(c.accounting_treatment || '')}" placeholder="Example: formula issue acknowledged; use daily extracted transactions"></div><div class="field">${categoryField('ctrlAffectedLine', c.affected_report_line || '', 'Affected report line / category')}</div><div class="field"><label>Expected value</label><input id="ctrlExpected" value="${esc(c.expected_value || val?.expected_value || '')}"></div><div class="field"><label>Actual value</label><input id="ctrlActual" value="${esc(c.actual_value || val?.actual_value || '')}"></div><div class="field"><label>Difference amount</label><input id="ctrlDifference" type="number" step="0.01" value="${Number(diff || 0)}"></div><div class="field"><label>Corrected amount RSD</label><input id="ctrlCorrectedAmount" type="number" step="0.01" value="${Number(c.corrected_amount_rsd || 0)}"></div><div class="field" style="grid-column:1/-1"><label>Root cause / issue found</label><textarea id="ctrlRootCause">${esc(c.root_cause || '')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Corrective action / certification explanation</label><textarea id="ctrlCorrectiveAction">${esc(c.corrective_action || '')}</textarea></div></div><label class="checkbox"><input type="checkbox" id="ctrlCreateAdjustment" ${a.transaction_id ? 'checked' : ''}><span>Create a manual adjustment transaction from this control issue.</span></label><div class="source-box"><h3>Optional manual adjustment</h3><div class="field-grid"><div class="field"><label>Adjustment date</label><input id="adjDate" value="${esc(a.date || `${i.period}-28`)}"></div><div class="field"><label>Direction</label><select id="adjDirection"><option value="inflow" ${a.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${a.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Amount RSD</label><input id="adjAmount" type="number" step="0.01" value="${Number(a.amount_rsd_equivalent || 0)}"></div><div class="field">${categoryField('adjCategory', a.suggested_category || c.affected_report_line || '', 'Mapped category')}</div><div class="field"><label>Report group</label><input id="adjGroup" value="${esc(a.report_group || '')}"></div><div class="field"><label>Description</label><input id="adjDesc" value="${esc(a.description || i.description || '')}"></div></div></div>${val ? `<div class="source-box"><strong>Original validation:</strong><br>${esc(val.check_name)}<br>Expected: ${esc(val.expected_value)}<br>Actual: ${esc(val.actual_value)}<br>Difference: ${esc(val.difference)}<br>${esc(val.explanation || '')}</div>` : ''}</div>`;
+  const lists = suggestionDatalists();
+  return `<div><h3>Editable validation / control issue</h3>${lists}<input type="hidden" id="ctrlIssueId" value="${esc(i.review_item_id)}"><div class="field-grid"><div class="field"><label>Review area</label><select id="ctrlArea">${generalOptions(c.review_area || generalIssueType(i))}</select></div><div class="field"><label>Trusted source</label><select id="ctrlTrustedSource"><option ${c.trusted_source === 'Daily extracted transactions' ? 'selected' : ''}>Daily extracted transactions</option><option ${c.trusted_source === 'Monthly status sheet' ? 'selected' : ''}>Monthly status sheet</option><option ${c.trusted_source === 'Manual accountant review' ? 'selected' : ''}>Manual accountant review</option><option ${c.trusted_source === 'Owner clarification' ? 'selected' : ''}>Owner clarification</option></select></div><div class="field"><label>Accounting treatment / provisional treatment</label><input id="ctrlTreatment" value="${esc(c.accounting_treatment || '')}" placeholder="Example: formula issue acknowledged; use daily extracted transactions"></div>${categoryInput('ctrlAffectedLine', 'Affected report line / category', c.affected_report_line || '', 'Choose existing or type affected category/report line')}<div class="field"><label>Expected value</label><input id="ctrlExpected" value="${esc(c.expected_value || val?.expected_value || '')}"></div><div class="field"><label>Actual value</label><input id="ctrlActual" value="${esc(c.actual_value || val?.actual_value || '')}"></div><div class="field"><label>Difference amount</label><input id="ctrlDifference" type="number" step="0.01" value="${Number(diff || 0)}"></div><div class="field"><label>Corrected amount RSD</label><input id="ctrlCorrectedAmount" type="number" step="0.01" value="${Number(c.corrected_amount_rsd || 0)}"></div><div class="field" style="grid-column:1/-1"><label>Root cause / issue found</label><textarea id="ctrlRootCause">${esc(c.root_cause || '')}</textarea></div><div class="field" style="grid-column:1/-1"><label>Corrective action / certification explanation</label><textarea id="ctrlCorrectiveAction">${esc(c.corrective_action || '')}</textarea></div></div><label class="checkbox"><input type="checkbox" id="ctrlCreateAdjustment" ${a.transaction_id ? 'checked' : ''}><span>Create a manual adjustment transaction from this control issue.</span></label><div class="source-box"><h3>Optional manual adjustment</h3><div class="field-grid"><div class="field"><label>Adjustment date</label><input id="adjDate" value="${esc(a.date || `${i.period}-28`)}"></div><div class="field"><label>Direction</label><select id="adjDirection"><option value="inflow" ${a.direction === 'inflow' ? 'selected' : ''}>inflow</option><option value="outflow" ${a.direction === 'outflow' ? 'selected' : ''}>outflow</option></select></div><div class="field"><label>Amount RSD</label><input id="adjAmount" type="number" step="0.01" value="${Number(a.amount_rsd_equivalent || 0)}"></div>${categoryInput('adjCategory', 'Mapped category', a.suggested_category || c.affected_report_line || '')}${reportGroupInput('adjGroup', 'Report group', a.report_group || '')}<div class="field"><label>Description</label><input id="adjDesc" value="${esc(a.description || i.description || '')}"></div></div></div>${val ? `<div class="source-box"><strong>Original validation:</strong><br>${esc(val.check_name)}<br>Expected: ${esc(val.expected_value)}<br>Actual: ${esc(val.actual_value)}<br>Difference: ${esc(val.difference)}<br>${esc(val.explanation || '')}</div>` : ''}</div>`;
 }
 function accountantButtons() {
   return [
@@ -918,19 +1064,25 @@ function saveDecision(status, next = false) {
   const form = readForm(), reviewer = document.getElementById('reviewerName')?.value || (role() === 'owner' ? 'Business Owner' : 'Accountant Reviewer'), note = document.getElementById('reviewNote')?.value || '', ownerQuestion = document.getElementById('ownerQuestion')?.value || '';
   if (form?.kind === 'transaction' && tx) {
     const over = { ...form }; delete over.kind;
-    rememberCategory(form.suggested_category, 'transaction review mapped category', i.review_item_id, reviewer);
     over.review_status = statusLabel(status);
     if (status === 'rejected') over.excluded = true;
     STATE.txOverrides[tx.transaction_id] = over;
+    if (status !== 'rejected') {
+      addLocalSuggestion(form.suggested_category, 'category', { source: 'manual transaction review', review_item_id: i.review_item_id, reviewer });
+      addLocalSuggestion(form.report_group, 'report_group', { source: 'manual transaction review', review_item_id: i.review_item_id, reviewer });
+    }
     if (document.getElementById('createMappingRule')?.checked && status !== 'rejected') {
       STATE.mappingRules.push({ mapping_rule_id: `LOCAL-MAP-${Date.now()}`, period: 'ALL', direction: form.direction, raw_category: form.raw_category, suggested_category: form.suggested_category, report_group: form.report_group, created_from_review_item_id: i.review_item_id, reviewer, created_at: now() });
     }
   } else if (form?.kind === 'control') {
     const control = { ...form }; delete control.kind; delete control.adjustment;
-    rememberCategory(form.affected_report_line, 'validation/control affected category', i.review_item_id, reviewer);
-    rememberCategory(form.adjustment?.suggested_category, 'manual adjustment mapped category', i.review_item_id, reviewer);
     control.updated_at = now(); control.reviewer = reviewer;
     STATE.controlOverrides[i.review_item_id] = control;
+    if (status !== 'rejected') {
+      addLocalSuggestion(form.affected_report_line, 'category', { source: 'validation/control review', review_item_id: i.review_item_id, reviewer });
+      addLocalSuggestion(form.adjustment?.suggested_category, 'category', { source: 'manual adjustment review', review_item_id: i.review_item_id, reviewer });
+      addLocalSuggestion(form.adjustment?.report_group, 'report_group', { source: 'manual adjustment review', review_item_id: i.review_item_id, reviewer });
+    }
     if (form.create_adjustment && Number(form.adjustment.amount_rsd_equivalent || 0) !== 0 && !['rejected', 'escalated', 'needs_owner_clarification'].includes(status)) {
       STATE.manualAdjustments[i.review_item_id] = { transaction_id: `ADJ-${i.review_item_id}`, review_item_id: i.review_item_id, period: i.period, date: form.adjustment.date, direction: form.adjustment.direction, payment_method: 'manual_adjustment', currency_original: 'RSD', amount_rsd_equivalent: Number(form.adjustment.amount_rsd_equivalent || 0), raw_category: 'Manual control adjustment', suggested_category: form.adjustment.suggested_category, report_group: form.adjustment.report_group, counterparty_type: 'internal_review', counterparty: 'CONTROL_REVIEW', description: form.adjustment.description || `Manual adjustment from ${i.review_item_id}`, source_reference: i.source_reference || 'Manual control review', review_status: 'Manual adjustment - local review' };
     } else {
@@ -995,14 +1147,18 @@ function certifyMonthAccountant() {
 }
 
 function exportObj() {
-  return { exported_at: now(), app: 'Ask Your Business Smart Category Review Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, selected_scope: selected, category_suggestion_library: categoryCatalogObjects(), review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+  return { exported_at: now(), app: 'Ask Your Business Certified Data View Demo', version: APP_VERSION, warning: 'Browser-local demo export. Move to PostgreSQL in Option 2 for persistent storage.', company_code: DATA.company_code, selected_scope: selected, review_state: STATE, months: DATA.months.map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), adjusted_summary: adjSummary(m.period), certified_summary: certifiedSummary(m.period), review_stats: stats(m.period), local_quality_score: localQuality(m.period), batch_status: STATE.batchStatuses[m.period] || null, transactions: displayTxRows(m.period).map(t => effTx(t)), management_ready_transactions: certifiedSummary(m.period).managementRows, accountant_certified_transactions: certifiedSummary(m.period).accountingRows, rejected_rows: certifiedSummary(m.period).rejectedRows, pending_rows: certifiedSummary(m.period).pendingRows, unresolved_review_items: m.manual_review_queue.filter(i => blocksManagement(i) || blocksFormal(i)), review_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period), clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), control_resolutions: Object.entries(STATE.controlOverrides).filter(([id, c]) => itemById(id)?.period === m.period).map(([review_item_id, c]) => ({ review_item_id, ...c })), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+}
+function managementAnalysisPackObj() {
+  return { exported_at: now(), pack_type: 'Management Analysis Pack', app: 'Ask Your Business Certified Data View Demo', version: APP_VERSION, company_code: DATA.company_code, selected_scope: selected, purpose: 'Owner/management-ready dataset with limitations. Not a formal accountant-certified report unless the period status says accountant-certified.', scope_status: { management: managementStatus(), formal: formalStatus(), limitations: certificationLimitations().limits }, months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), limitations: certificationLimitations(m.period).limits, summary: certifiedSummary(m.period).management, category_breakdown: categoryBreakdownRows(certifiedSummary(m.period).managementRows, 999), transactions: certifiedSummary(m.period).managementRows, manual_adjustments: certifiedSummary(m.period).adjustments, rejected_rows: certifiedSummary(m.period).rejectedRows })) };
 }
 function accountantPackObj() {
-  return { exported_at: now(), pack_type: 'Accountant Operations Review Pack', version: APP_VERSION, company_code: DATA.company_code, selected_scope: selected, category_suggestion_library: categoryCatalogObjects(), purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
+  return { exported_at: now(), pack_type: 'Accountant Operations Review Pack', version: APP_VERSION, company_code: DATA.company_code, selected_scope: selected, purpose: 'Send to accountant/internal finance team for unresolved certification, owner clarifications, validation-control decisions, and formal reporting sign-off.', months: scopeMonths().map(m => ({ period: m.period, label: m.label, management_status: managementStatus(m.period), formal_status: formalStatus(m.period), pending_accountant_items: m.manual_review_queue.filter(needsAccountantWork), owner_clarification_tasks: Object.values(STATE.clarificationTasks).filter(t => t.period === m.period), validation_results: m.validation_results, owner_reviewed_decisions: Object.values(STATE.decisions).filter(d => d.period === m.period && ['owner_reviewed', 'needs_accountant_review'].includes(d.status)), mapping_rules: STATE.mappingRules.filter(r => !r.period || r.period === 'ALL' || r.period === m.period), manual_adjustments: Object.values(STATE.manualAdjustments).filter(a => a.period === m.period) })) };
 }
 function download(name, obj) { const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
 function exportPackage() { download(`certified_import_package_${new Date().toISOString().slice(0, 10)}.json`, exportObj()); }
 function exportAccountantPack() { download(`accountant_review_pack_${new Date().toISOString().slice(0, 10)}.json`, accountantPackObj()); }
+function exportManagementAnalysisPack() { download(`management_analysis_pack_${new Date().toISOString().slice(0, 10)}.json`, managementAnalysisPackObj()); }
 function exportState() { download(`review_decisions_${new Date().toISOString().slice(0, 10)}.json`, STATE); }
 function resetProgress() { if (confirm('Reset all local decisions, edits, clarification tasks, and batch statuses in this browser?')) { STATE = blankState(); saveState(); renderAll(); } }
 
@@ -1016,6 +1172,7 @@ window.closeModal = closeModal;
 window.saveDecision = saveDecision;
 window.exportPackage = exportPackage;
 window.exportAccountantPack = exportAccountantPack;
+window.exportManagementAnalysisPack = exportManagementAnalysisPack;
 window.exportState = exportState;
 window.resetProgress = resetProgress;
 window.markMonthManagementReady = markMonthManagementReady;
@@ -1023,8 +1180,6 @@ window.certifyMonthAccountant = certifyMonthAccountant;
 window.ask = ask;
 window.renderReviewTable = renderReviewTable;
 window.renderTxTable = renderTxTable;
-window.onCategoryInput = onCategoryInput;
-window.copyCategoryToActiveField = copyCategoryToActiveField;
 
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => setActiveSection(b.dataset.section));
 Promise.all([
