@@ -1,28 +1,38 @@
-# Ask Your Business - Streamlined UI Framework v1.5
+# Ask Your Business - Owner Command Center v1.6
 
-This zero-dependency Railway demo keeps all v1.4 workflow features and focuses on a cleaner, more scalable UI foundation.
+This demo keeps the accountant-side data intake/review/certification workflow, but changes the owner experience into a finished product view.
 
-## What v1.5 adds
+## v1.6 focus
 
-- New persistent left sidebar navigation.
-- Cleaner owner/accountant workspace split.
-- Top page header that changes by section.
-- Grouped navigation: setup, owner workspace, accountant operations, shared tools.
-- Cleaner cards, tables, buttons, status pills, modals, and responsive layout.
-- Better visual hierarchy for period readiness, review center, certified data, and Serbian COA flows.
+- Owner sees a clean command center only.
+- Owner does not perform setup, review, mapping, or certification.
+- Accountant side handles company setup, Serbian account mapping, review, certification, and report preparation.
+- Owner gets dedicated pages for:
+  - Owner Home
+  - Cash & Obligations
+  - Financial Reports
+  - Tax Reports
+  - Company Health
+  - AI Models & Analytics
+  - AI Assistant
+  - Documents & Published Reports
 
-## What remains from v1.4
+## Railway
 
-- Company Setup & Serbian Accounting Profile.
-- Full Serbian COA dictionary for the standard company/cooperative/entrepreneur framework.
-- Review Center with source evidence viewer.
-- Mapped category autocomplete and local category learning.
-- Management-ready vs accountant-certified data states.
-- Period Readiness checklist and certification pack export.
-- Browser-local storage for decisions and setup.
+The app has no external dependencies and runs with:
 
-## Important
+```bash
+npm start
+```
 
-This is still a browser-local demo. Review decisions, company setup, period statuses, and certification decisions are saved in localStorage. Export packages before clearing browser data or switching computers.
+Health check:
 
-Test deployment with `/health`. Expected version: `1.5.0`.
+```text
+/health
+```
+
+Expected version: `1.6.0`.
+
+## Important demo limitation
+
+This is still browser-local. Review decisions, company setup, mappings, and certification state are saved in localStorage only until PostgreSQL is added.

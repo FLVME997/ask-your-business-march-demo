@@ -9,7 +9,7 @@ const POSTING_TREATMENTS = window.POSTING_TREATMENTS || [];
 const TAX_TREATMENTS = window.TAX_TREATMENTS || [];
 const RAW_TO_KONTO_RULES = window.RAW_TO_KONTO_RULES || [];
 const LS_KEY = 'ayb_owner_accountant_portal_v12';
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 const MONTH_ASSETS = {
   '2020-03': { original_file_name: '31 03 2020.xlsx', review_workbook: '/review-workbooks/University_March_2020_Import_Review_Workbook.xlsx', pdf_report: '/reports/University_March_2020_Import_Review_Report.pdf' },
@@ -220,11 +220,16 @@ function setRole(r) {
 }
 
 const SECTION_META = {
-  setup: ['Company Setup', 'Define legal form, Serbian accounting framework, tax profile, controls, and certification gate.'],
-  owner: ['Owner Portal', 'Simplified business view: cash, action needed, management status, and accounting confidence.'],
+  setup: ['Company Setup', 'Accountant-run company profile, Serbian framework, tax setup, controls, and certification gate.'],
+  owner: ['Owner Home', 'Finished owner command center: status, cash, reports, health, tax, AI assistant, and future models.'],
+  cash: ['Cash & Obligations', 'Owner liquidity view: opening cash, inflows, outflows, closing cash, and upcoming obligation placeholders.'],
+  financials: ['Financial Reports', 'Monthly and quarterly management reports prepared from accountant-reviewed data layers.'],
+  tax: ['Tax Reports', 'Owner-facing Serbian tax and compliance status prepared by the accountant side.'],
+  health: ['Company Health', 'Simple company health check using cash movement, data readiness, review status, and risk signals.'],
+  models: ['AI Models & Analytics', 'Future forecasting, scenario simulation, anomaly detection, and analytical report workspace.'],
   accountant: ['Accountant Operations', 'Back-office queue for your accounting team: blockers, owner questions, template reuse, and priority reviews.'],
-  shared: ['Shared Workspace', 'Owner/accountant clarifications, decisions, and audit activity in one aligned workspace.'],
-  certified: ['Certified Data', 'See what is management-ready, accountant-certified, rejected, adjusted, or still pending.'],
+  shared: ['Shared Workspace', 'Internal owner/accountant clarification and audit activity workspace. Hidden from the finished owner view.'],
+  certified: ['Certified Data', 'Technical data-readiness layer for accountants: management-ready, accountant-certified, rejected, adjusted, or pending.'],
   readiness: ['Period Readiness', 'Management-ready and accountant-certified checklists before data moves forward.'],
   overview: ['Technical Overview', 'Developer-style overview of import packages, data layers, and workflow state.'],
   review: ['Review Center', 'Resolve review items, edit records, map categories, view evidence, and certify decisions.'],
@@ -233,8 +238,8 @@ const SECTION_META = {
   coa: ['Serbian COA', 'Search the Serbian Kontni okvir dictionary and raw-category-to-konto suggestions.'],
   validation: ['Validation', 'Source control, tie-out, formula, monthly status, and data-quality checks.'],
   certification: ['Certification', 'Batch-level statuses, management-ready state, and accountant certification state.'],
-  assistant: ['Assistant', 'No-guess answers based on the current reviewed/certified dataset and limitations.'],
-  reports: ['Reports', 'Open PDF import reports and generated review workbooks for evidence checks.']
+  assistant: ['AI Assistant', 'Owner-friendly no-guess answers based on the current reviewed/certified dataset and limitations.'],
+  reports: ['Documents & Reports', 'Published report packs and evidence files prepared by the accountant side.']
 };
 function updatePageChrome(id) {
   const meta = SECTION_META[id] || ['Ask Your Business', 'Finance command center'];
@@ -245,7 +250,7 @@ function updatePageChrome(id) {
 }
 
 function allowedTabs() {
-  if (role() === 'owner') return ['setup', 'owner', 'certified', 'shared', 'assistant', 'reports'];
+  if (role() === 'owner') return ['owner', 'cash', 'financials', 'tax', 'health', 'models', 'assistant', 'reports'];
   return ['setup', 'accountant', 'readiness', 'certified', 'review', 'transactions', 'mapping', 'coa', 'validation', 'certification', 'shared', 'reports'];
 }
 function activeSection() { return document.querySelector('.section.active')?.id || (role() === 'owner' ? 'owner' : 'accountant'); }
@@ -691,6 +696,11 @@ function renderAll() {
   renderTabs();
   renderCompanySetup();
   renderOwnerPortal();
+  renderOwnerCash();
+  renderFinancialReports();
+  renderTaxReports();
+  renderCompanyHealth();
+  renderModelsLab();
   renderAccountantWorkbench();
   renderShared();
   renderCertifiedData();
@@ -706,10 +716,14 @@ function renderAll() {
   if (!allowedTabs().includes(activeSection())) setActiveSection(role() === 'owner' ? 'owner' : 'accountant');
 }
 function renderRoleBar() {
-  document.getElementById('roleLabel').textContent = role() === 'owner' ? 'Owner Portal' : 'Accountant Workbench';
+  document.getElementById('roleLabel').textContent = role() === 'owner' ? 'Owner Command Center' : 'Accountant Workbench';
   document.getElementById('roleExplain').textContent = role() === 'owner'
-    ? 'Owner sees clean business visibility, tasks to answer, management-ready warnings, and assistant answers with limitations.'
-    : 'Accountant team handles intake alignment, mapping, validation, owner questions, and certification controls.';
+    ? 'Owner sees a finished business dashboard only. Setup, review, mapping, and certification are handled by the accountant side.'
+    : 'Accountant team handles company setup, intake alignment, mapping, validation, review, and certification controls.';
+  const storageNotice = document.querySelector('.storage-notice');
+  if (storageNotice) storageNotice.style.display = role() === 'owner' ? 'none' : '';
+  const footer = document.querySelector('.side-footer p');
+  if (footer) footer.textContent = role() === 'owner' ? 'Owner sees only published accountant-prepared data. Operational work stays in the accountant workspace.' : 'Browser-local only. Export packages before clearing data or switching computers.';
   document.querySelectorAll('.rolebtn').forEach(b => {
     b.classList.toggle('active', b.dataset.role === role());
     b.onclick = () => setRole(b.dataset.role);
@@ -828,56 +842,184 @@ function applyUniversitySetupPreset() {
 }
 function resetCompanySetup() { if (confirm('Reset company setup profile in this browser?')) { STATE.companyProfile = defaultCompanyProfile(); audit('company_setup_reset', {}); saveState(); renderAll(); setActiveSection('setup'); } }
 
-function renderOwnerPortal() {
-  const a = adjSummary();
-  const totalTasks = openTasks().length;
-  const mgAll = managementStatus();
-  const fmAll = formalStatus();
+function ownerScopeSummary(period = selected) {
+  const sum = certifiedSummary(period);
+  const source = period === 'ALL' ? DATA.months : [monthByPeriod(period)].filter(Boolean);
+  const current = sum.management.rows ? sum.management : adjSummary(period);
+  const mg = managementStatus(period);
+  const fm = formalStatus(period);
+  const st = stats(period);
   const setup = setupStatus();
-  const currentCompany = 'University Demo';
-  const cards = [
-    kpi('Current cash shown', money(a.closing), 'Latest imported management view', a.closing >= 0 ? 'pos' : 'neg'),
-    kpi('3-month cash movement', money(a.net), monthTrendSentence(), a.net >= 0 ? 'pos' : 'neg'),
-    kpi('Questions for you', totalTasks, 'Only owner-context questions are shown here', totalTasks ? 'warnText' : 'pos'),
-    kpi('Accountant status', fmAll.label, 'Formal certification handled by accountant team', fmAll.tone === 'good' ? 'pos' : 'warnText')
-  ].join('');
-  const ownerTasks = openTasks().slice(0, 6).map(t => {
-    const i = itemById(t.review_item_id);
-    return `<div class="soft-item clickable-row" data-open-item="${esc(t.review_item_id)}"><strong>${esc(t.period)} • ${esc(i?.source_reference || t.review_item_id)}</strong><div class="muted">${esc(t.question || i?.suggested_action || i?.description || '')}</div>${t.owner_answer ? `<div class="mini">Current answer: ${esc(t.owner_answer)}</div>` : ''}</div>`;
-  }).join('');
-  const monthRows = DATA.months.map(m => {
-    const st = simpleMonthStatus(m), aa = adjSummary(m.period);
-    return `<tr><td>${esc(m.label)}</td><td>${pill(st.mg.label, st.mg.tone)}</td><td>${pill(st.fm.label, st.fm.tone)}</td><td>${pill(st.owner, st.tone)}</td><td>${money(aa.net)}</td><td>${money(aa.closing)}</td></tr>`;
+  return { sum, source, current, mg, fm, st, setup };
+}
+function ownerReadyLabel(period = selected) {
+  const o = ownerScopeSummary(period);
+  if (o.fm.tone === 'good') return { label: 'Accountant-certified', tone: 'good', detail: 'The accounting team has certified this selected period in the demo workflow.' };
+  if (o.mg.tone !== 'warn') return { label: 'Business-ready', tone: 'purple', detail: 'The owner dashboard is available. Formal accountant certification may still be in progress.' };
+  return { label: 'Accountant team preparing', tone: 'info', detail: 'The accountant workbench is handling review and certification. No owner action is required in this portal.' };
+}
+function quarterKey(period) {
+  const [y,m] = String(period).split('-').map(Number);
+  return `${y} Q${Math.ceil(m/3)}`;
+}
+function quarterlyRows() {
+  const groups = {};
+  DATA.months.forEach(m => {
+    const q = quarterKey(m.period);
+    groups[q] = groups[q] || { q, periods: [], inflows: 0, outflows: 0, net: 0, closing: 0, rows: 0 };
+    const a = adjSummary(m.period);
+    groups[q].periods.push(m.label);
+    groups[q].inflows += Number(a.inflows || 0);
+    groups[q].outflows += Number(a.outflows || 0);
+    groups[q].net += Number(a.net || 0);
+    groups[q].closing = Number(a.closing || 0);
+    groups[q].rows += Number(a.rows || 0);
   });
-  const headline = totalTasks
-    ? `<div class="owner-action-banner"><strong>${totalTasks} question(s) need your answer.</strong><div>Your accountant team only sends questions when they need business context. Answering these helps them finish certification faster.</div><button class="btn primary" onclick="setActiveSection('shared')">Answer questions</button></div>`
-    : `<div class="ready-banner"><strong>No owner action needed right now.</strong><div>Your accountant team can continue working in the background. You can use management-ready information with the limitations shown.</div></div>`;
+  return Object.values(groups);
+}
+function ownerCategoryRows(limit = 8, period = selected) {
+  const rows = certifiedSummary(period).managementRows.length ? certifiedSummary(period).managementRows : displayTxRows(period);
+  return categoryBreakdownRows(rows, limit);
+}
+function healthScore(period = selected) {
+  const o = ownerScopeSummary(period);
+  let score = 55;
+  if (o.current.net > 0) score += 12;
+  if (o.current.closing > 0) score += 10;
+  if (o.mg.tone !== 'warn') score += 10;
+  if (o.fm.tone === 'good') score += 8;
+  if (localQuality(period) >= 90) score += 8;
+  if (o.st.formal_blocking > 0) score -= Math.min(12, Math.ceil(o.st.formal_blocking/5));
+  if (o.st.management_blocking > 0) score -= Math.min(15, Math.ceil(o.st.management_blocking/3));
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  let label = score >= 80 ? 'Healthy' : score >= 65 ? 'Stable' : score >= 50 ? 'Watch' : 'Needs attention';
+  let tone = score >= 80 ? 'good' : score >= 65 ? 'purple' : score >= 50 ? 'warn' : 'bad';
+  return { score, label, tone };
+}
+function reportStatusPill(period = selected) {
+  const fm = formalStatus(period), mg = managementStatus(period);
+  return fm.tone === 'good' ? pill('Accountant-certified', 'good') : mg.tone !== 'warn' ? pill('Management-ready', 'purple') : pill('Prepared by accountant team', 'info');
+}
+function renderOwnerPortal() {
+  const o = ownerScopeSummary();
+  const ready = ownerReadyLabel();
+  const h = healthScore();
+  const monthRows = DATA.months.map(m => {
+    const a = adjSummary(m.period), r = ownerReadyLabel(m.period), hs = healthScore(m.period);
+    return `<tr><td>${esc(m.label)}</td><td>${pill(r.label, r.tone)}</td><td>${pill(hs.label, hs.tone)} ${hs.score}/100</td><td>${money(a.inflows)}</td><td>${money(a.outflows)}</td><td>${money(a.net)}</td><td>${money(a.closing)}</td></tr>`;
+  });
+  const catRows = ownerCategoryRows(7).map(g => `<tr><td>${esc(g.category)}</td><td>${g.rows}</td><td>${money(g.inflows)}</td><td>${money(g.outflows)}</td><td>${money(g.net)}</td></tr>`);
   document.getElementById('owner').innerHTML = `
-    <div class="owner-hero card">
+    <div class="owner-command-hero card">
       <div>
-        <div class="portal-tag">Owner portal • simplified business view</div>
-        <h2>${esc(currentCompany)}</h2>
-        <p class="muted">This view hides accounting complexity. It shows only what you need to know: business status, cash movement, questions for you, and whether accountant certification is still pending.</p>
+        <div class="portal-tag">Owner command center</div>
+        <h2>University Demo</h2>
+        <p class="muted">A clean owner-facing page. Company setup, data review, mapping, Serbian konta, and certification are handled by the accountant side. The owner sees finished business information, confidence labels, and the AI assistant.</p>
+        <div class="owner-finished-message">No owner task queue is shown here. The accountant team prepares, reviews, certifies, and publishes the data into this owner view.</div>
       </div>
-      <div class="owner-status-stack">
-        ${pill(mgAll.label, mgAll.tone)} ${pill(fmAll.label, fmAll.tone)} ${pill(setup.label, setup.tone)} ${pill(totalTasks ? 'Owner action needed' : 'No owner action', totalTasks ? 'warn' : 'good')}
-      </div>
+      <div class="owner-status-stack">${pill(ready.label, ready.tone)} ${pill(o.fm.label, o.fm.tone)} ${pill(h.label + ' ' + h.score + '/100', h.tone)}</div>
     </div>
-    ${headline}
-    <div class="grid cards">${cards}</div>
+    <div class="grid cards">
+      ${kpi('Cash position', money(o.current.closing), 'Current owner-visible closing cash', o.current.closing >= 0 ? 'pos' : 'neg')}
+      ${kpi('Cash movement', money(o.current.net), 'Selected period net movement', o.current.net >= 0 ? 'pos' : 'neg')}
+      ${kpi('Company health', `${h.score}/100`, h.label, h.tone === 'good' ? 'pos' : h.tone === 'warn' ? 'warnText' : 'purpleText')}
+      ${kpi('Report status', ready.label, 'Published with confidence level', ready.tone === 'good' ? 'pos' : 'purpleText')}
+    </div>
     <div class="grid two">
-      <div class="card"><h2>Plain-English status</h2>
-        <div class="status-box ${mgAll.tone}"><strong>Business view</strong><div>${esc(mgAll.detail)}</div></div>
-        <div class="status-box ${fmAll.tone}"><strong>Accounting view</strong><div>${esc(fmAll.detail)}</div></div>
-        <div class="status-box ${setup.tone}"><strong>Company setup</strong><div>${esc(setup.detail)}</div><button class="btn" onclick="setActiveSection('setup')">Open company setup</button></div>
-        <div class="notice"><strong>Important:</strong> management-ready data is useful for business decisions and visibility. Accountant-certified data is needed for formal accounting, tax, or statutory reporting.</div>
+      <div class="card"><h2>Executive summary</h2><div class="answer">${esc(monthTrendSentence())}\n\nOwner view status: ${ready.label}.\nAccounting status: ${o.fm.label}.\nCompany health: ${h.label} (${h.score}/100).\n\nThe accountant team handles setup, review, certification, Serbian account mapping and tax/report preparation in the background.</div><div class="toolbar"><button class="btn primary" onclick="setActiveSection('assistant')">Ask AI assistant</button><button class="btn" onclick="setActiveSection('financials')">View financial reports</button><button class="btn" onclick="setActiveSection('models')">Open AI models</button></div></div>
+      <div class="card"><h2>Published owner areas</h2>
+        <div class="owner-menu-card" onclick="setActiveSection('cash')"><strong>Cash & obligations</strong><span>Liquidity, cash movement, and future obligations</span></div>
+        <div class="owner-menu-card" onclick="setActiveSection('financials')"><strong>Financial reports</strong><span>Monthly and quarterly management reports</span></div>
+        <div class="owner-menu-card" onclick="setActiveSection('tax')"><strong>Tax reports</strong><span>Accountant-prepared Serbian tax status</span></div>
+        <div class="owner-menu-card" onclick="setActiveSection('health')"><strong>Company health</strong><span>Health score, risks, and performance signals</span></div>
+        <div class="owner-menu-card" onclick="setActiveSection('models')"><strong>AI modeling</strong><span>Forecasts and analytical reports coming next</span></div>
       </div>
-      <div class="card"><h2>What you need to do</h2>${ownerTasks || '<div class="notice oknotice">Nothing right now. Your accountant team is handling the review work.</div>'}</div>
     </div>
-    <div class="card"><h2>Company timeline</h2><p class="muted">Simple monthly view. Detailed validation and mapping tasks stay in the accountant workbench.</p>${table(['Month','Business view','Accounting status','Owner action','Cash movement','Closing cash'], monthRows)}</div>
-    <div class="card"><h2>Business summary</h2><div class="answer">${esc(monthTrendSentence())}\n\nThe owner portal will eventually show all companies here. For now, this demo uses one real company dataset while the accountant workbench proves the data-alignment workflow.</div></div>
+    <div class="card"><h2>Month-by-month owner report</h2>${table(['Month','Published status','Health','Inflows','Outflows','Net movement','Closing cash'], monthRows)}</div>
+    <div class="card"><h2>Top categories in owner view</h2><p class="muted">Owner-facing category breakdown. Technical Serbian konto mapping remains in the accountant workbench.</p>${catRows.length ? table(['Category','Rows','Inflows','Outflows','Net'], catRows) : '<div class="notice">No published category data yet.</div>'}</div>
   `;
-  document.querySelectorAll('[data-open-item]').forEach(r => r.addEventListener('click', () => openModal(r.dataset.openItem)));
+}
+
+function renderOwnerCash() {
+  const a = adjSummary();
+  const rows = DATA.months.map(m => { const x = adjSummary(m.period); return `<tr><td>${esc(m.label)}</td><td>${money(x.opening)}</td><td>${money(x.inflows)}</td><td>${money(x.outflows)}</td><td>${money(x.net)}</td><td>${money(x.closing)}</td></tr>`; });
+  const transferCats = displayTxRows().filter(t => /konverz|bankomat|višak|visak|kusur/i.test(`${t.raw_category} ${t.description}`));
+  document.getElementById('cash').innerHTML = `
+    <div class="card owner-page-hero"><div><div class="portal-tag">Cash command</div><h2>Cash & obligations</h2><p class="muted">Owner liquidity view. Accountant-side reconciliation and account mapping remain hidden unless published.</p></div>${reportStatusPill()}</div>
+    <div class="grid cards">
+      ${kpi('Opening cash', money(a.opening), 'Selected scope')}
+      ${kpi('Inflows', money(a.inflows), 'Cash and bank money in', 'pos')}
+      ${kpi('Outflows', money(a.outflows), 'Cash and bank money out', 'warnText')}
+      ${kpi('Closing cash', money(a.closing), 'Owner-visible cash position', a.closing >= 0 ? 'pos' : 'neg')}
+    </div>
+    <div class="grid two">
+      <div class="card"><h2>Monthly cash bridge</h2>${table(['Month','Opening','Inflows','Outflows','Net','Closing'], rows)}</div>
+      <div class="card"><h2>Obligations monitor</h2><div class="status-box info"><strong>Coming integration layer</strong><div>Contract due dates, loan repayments, supplier bills, tax dates, payroll and renewal deadlines will appear here when contracts, bills and bank data are connected.</div></div><div class="issue"><strong>Potential cash/FX transfer items detected:</strong> ${transferCats.length}. These are monitored by the accountant side because they may be transfers rather than real income/expense.</div></div>
+    </div>`;
+}
+
+function renderFinancialReports() {
+  const monthlyRows = DATA.months.map(m => { const a = adjSummary(m.period); return `<tr><td>${esc(m.label)}</td><td>${reportStatusPill(m.period)}</td><td>${money(a.inflows)}</td><td>${money(a.outflows)}</td><td>${money(a.net)}</td><td>${money(a.closing)}</td></tr>`; });
+  const qRows = quarterlyRows().map(q => `<tr><td>${esc(q.q)}</td><td>${esc(q.periods.join(', '))}</td><td>${money(q.inflows)}</td><td>${money(q.outflows)}</td><td>${money(q.net)}</td><td>${money(q.closing)}</td></tr>`);
+  const cats = ownerCategoryRows(12).map(g => `<tr><td>${esc(g.category)}</td><td>${g.rows}</td><td>${money(g.inflows)}</td><td>${money(g.outflows)}</td><td>${money(g.net)}</td></tr>`);
+  document.getElementById('financials').innerHTML = `
+    <div class="card owner-page-hero"><div><div class="portal-tag">Published financials</div><h2>Financial Reports</h2><p class="muted">Owner-facing reports prepared from the accountant-managed data layer. Current demo is cash/management-basis; statutory Serbian accounting reports come after ledger and PostgreSQL.</p></div>${reportStatusPill()}</div>
+    <div class="grid two">
+      <div class="card"><h2>Monthly management report</h2>${table(['Month','Status','Inflows','Outflows','Net movement','Closing cash'], monthlyRows)}</div>
+      <div class="card"><h2>Quarterly report</h2><p class="muted">Based on imported months available in the demo. Q1/Q2 may be partial because only March-May are loaded.</p>${table(['Quarter','Months included','Inflows','Outflows','Net','Closing'], qRows)}</div>
+    </div>
+    <div class="card"><h2>Revenue / expense category report</h2>${cats.length ? table(['Category','Rows','Inflows','Outflows','Net'], cats) : '<div class="notice">No published category report yet.</div>'}</div>
+    <div class="grid three"><div class="card"><h3>Profit & loss</h3><p class="muted">Coming with Serbian ledger posting and Serbian COA-certified data.</p></div><div class="card"><h3>Balance sheet</h3><p class="muted">Coming after bank, receivables, payables, assets, liabilities and period locks.</p></div><div class="card"><h3>Cash flow statement</h3><p class="muted">Current demo is closest to a management cash-flow report. Formal report comes later.</p></div></div>`;
+}
+
+function renderTaxReports() {
+  const p = companyProfile();
+  const payrollBase = displayTxRows().filter(t => /zarade|doprinos/i.test(`${t.raw_category} ${t.description} ${t.suggested_category}`)).reduce((a,t)=>a+Number(t.amount_rsd_equivalent||0),0);
+  const taxRows = [
+    ['PDV / VAT', p.pdv_status || 'Unknown', 'Prepared by accountant side after invoices/SEF and PDV treatment are connected'],
+    ['SEF / e-faktura', p.sef_status || 'Unknown', 'Future integration area for Serbian e-invoice evidence and matching'],
+    ['Fiscalization', p.fiscalization_status || 'Unknown', 'Future POS/fiscal receipt connection if applicable'],
+    ['Payroll taxes/contributions', p.payroll_required || 'Unknown', `${money(payrollBase)} payroll-related cash rows detected in demo data`],
+    ['Corporate tax', p.corporate_tax || 'Unknown', 'Future accountant-prepared tax exposure and provision report']
+  ].map(r => `<tr><td>${esc(r[0])}</td><td>${pill(r[1])}</td><td>${esc(r[2])}</td></tr>`);
+  document.getElementById('tax').innerHTML = `
+    <div class="card owner-page-hero"><div><div class="portal-tag">Accountant-prepared tax center</div><h2>Tax Reports</h2><p class="muted">The owner sees tax status and published reports. The accountant side performs Serbian konto, PDV, SEF, payroll, fiscalization and tax review.</p></div>${pill('Accountant prepared', 'purple')}</div>
+    <div class="card"><h2>Tax and compliance status</h2>${table(['Area','Status','Owner-friendly explanation'], taxRows)}</div>
+    <div class="grid three"><div class="card"><h3>PDV report</h3><p class="muted">Will show output/input PDV, SEF evidence, invoices, and accountant status once invoice data is connected.</p></div><div class="card"><h3>Payroll report</h3><p class="muted">Will show salaries, taxes, contributions, PPP-PD style support data, and payment status.</p></div><div class="card"><h3>Tax calendar</h3><p class="muted">Will show upcoming Serbian tax, payroll, SEF, fiscalization, and annual reporting deadlines.</p></div></div>`;
+}
+
+function renderCompanyHealth() {
+  const h = healthScore();
+  const o = ownerScopeSummary();
+  const signals = [
+    ['Liquidity', o.current.closing > 0 ? 'Positive cash position' : 'Cash pressure', o.current.closing > 0 ? 'good' : 'bad'],
+    ['Cash trend', o.current.net >= 0 ? 'Positive movement' : 'Negative movement', o.current.net >= 0 ? 'good' : 'warn'],
+    ['Data readiness', o.mg.label, o.mg.tone],
+    ['Accounting certification', o.fm.label, o.fm.tone],
+    ['Data quality', `${localQuality().toFixed(1)}/100`, localQuality() >= 90 ? 'good' : 'warn']
+  ].map(r => `<tr><td>${esc(r[0])}</td><td>${pill(r[1], r[2])}</td><td>${esc(r[0] === 'Accounting certification' ? 'Handled by accountant side.' : 'Included in owner health score.')}</td></tr>`);
+  document.getElementById('health').innerHTML = `
+    <div class="card owner-page-hero"><div><div class="portal-tag">Company health check</div><h2>Health score: ${h.score}/100</h2><p class="muted">Simple owner signal built from liquidity, cash trend, data readiness, accountant status and quality checks. More financial ratios will be added after the ledger layer.</p></div>${pill(h.label, h.tone)}</div>
+    <div class="grid cards">${kpi('Health score', `${h.score}/100`, h.label, h.tone === 'good' ? 'pos' : h.tone === 'warn' ? 'warnText' : 'purpleText')}${kpi('Data quality', `${localQuality().toFixed(1)}/100`, 'Import/review reliability')}${kpi('Accounting status', o.fm.label, 'Accountant side owns certification')}${kpi('Cash trend', money(o.current.net), 'Net cash movement', o.current.net >= 0 ? 'pos' : 'warnText')}</div>
+    <div class="card"><h2>Health signals</h2>${table(['Signal','Status','Explanation'], signals)}</div>
+    <div class="card"><h2>Risk areas to monitor</h2><div class="issue">Owner/founder payments, FX conversions, legal/debt items, and tax-sensitive categories should remain accountant-reviewed before formal reporting.</div><div class="issue">Future health score should include receivables, payables, contract obligations, debt, payroll runway, tax exposure, and bank reconciliation.</div></div>`;
+}
+
+function renderModelsLab() {
+  const a = adjSummary();
+  const modelRows = [
+    ['Cash forecast', 'Planned', 'Forecast future cash using certified inflows/outflows, contract obligations, payroll and tax dates.'],
+    ['Scenario simulator', 'Planned', 'Model questions like: can I hire, can I withdraw cash, what if revenue drops?'],
+    ['Anomaly detection', 'Planned', 'Detect unusual expenses, new categories, unexpected cash movements, duplicate risks.'],
+    ['Revenue / expense prediction', 'Planned', 'Use certified monthly data to project future income and cost trends.'],
+    ['Company benchmarking', 'Later', 'Compare companies in the owner portfolio once privacy and consent controls exist.'],
+    ['Tax exposure estimate', 'Later', 'Estimate future tax obligations from accountant-certified data and tax rules.']
+  ].map(r => `<tr><td>${esc(r[0])}</td><td>${pill(r[1], r[1] === 'Planned' ? 'purple' : 'info')}</td><td>${esc(r[2])}</td></tr>`);
+  document.getElementById('models').innerHTML = `
+    <div class="card owner-page-hero"><div><div class="portal-tag">Future analytical layer</div><h2>AI Models & Analytical Reports</h2><p class="muted">This page is reserved for the future modeling layer. Models should use management-ready or accountant-certified data only, never raw unreviewed imports.</p></div>${pill('Coming next', 'purple')}</div>
+    <div class="grid cards">${kpi('Available history', DATA.months.length + ' months', 'Demo data loaded')}${kpi('Rows available', displayTxRows().length, 'Before production database')}${kpi('Current net movement', money(a.net), 'Model input example', a.net >= 0 ? 'pos' : 'warnText')}${kpi('Model readiness', managementStatus().tone === 'warn' ? 'Draft' : 'Ready for demo', 'Depends on review/certification')}</div>
+    <div class="card"><h2>Model roadmap</h2>${table(['Model / analysis','Status','Purpose'], modelRows)}</div>
+    <div class="card"><h2>Rule for future models</h2><div class="answer">Models must use certified or clearly labelled management-ready data only. If a period is not accountant-certified, the model output should say so clearly. This keeps the owner experience useful without pretending the data is formal statutory accounting.</div></div>`;
 }
 
 function renderAccountantWorkbench() {
@@ -1252,15 +1394,32 @@ function renderCert() {
 
 function renderAssistant() {
   const qs = role() === 'owner'
-    ? ['Can I use this data for business decisions?', 'What does my accountant need from me?', 'How did May perform?']
+    ? ['What should I know about my company today?', 'How much cash do I have?', 'Show me the financial report summary.', 'What is my company health?', 'What tax reports are ready?', 'What AI models will be available?']
     : ['What should the accountant team review next?', 'Which months are management-ready?', 'What blocks accountant certification?'];
-  document.getElementById('assistant').innerHTML = `<div class="card"><h2>Assistant Demo</h2><p class="muted">Current version is rule-based and uses the loaded/imported data plus your local review state. Later this becomes the database-backed AI assistant.</p><div class="toolbar">${qs.map(q => `<button class="btn" onclick="ask('${esc(q)}')">${esc(q)}</button>`).join('')}</div><div class="toolbar"><input id="customQ" placeholder="Type a question..."><button class="btn primary" onclick="ask(document.getElementById('customQ').value)">Ask</button></div><div id="answer" class="answer">Select a question.</div></div>`;
+  const ownerIntro = role() === 'owner' ? `<div class="card owner-page-hero"><div><div class="portal-tag">Ask your business anything</div><h2>AI Assistant</h2><p class="muted">Owner asks in plain language. The assistant answers from the published management/accountant data layer and states limitations. No raw accounting work is shown to the owner.</p></div>${reportStatusPill()}</div>` : '';
+  document.getElementById('assistant').innerHTML = `${ownerIntro}<div class="card"><h2>${role() === 'owner' ? 'Business assistant' : 'Assistant Demo'}</h2><p class="muted">Current version is rule-based and uses the loaded/imported data plus your local review state. Later this becomes the database-backed AI assistant.</p><div class="toolbar">${qs.map(q => `<button class="btn" onclick="ask('${esc(q)}')">${esc(q)}</button>`).join('')}</div><div class="toolbar"><input id="customQ" placeholder="Type a question..."><button class="btn primary" onclick="ask(document.getElementById('customQ').value)">Ask</button></div><div id="answer" class="answer">Select a question.</div></div>`;
 }
 function ask(q) {
-  q = String(q || '').toLowerCase();
-  const st = stats(), a = adjSummary(), mg = managementStatus(), fm = formalStatus(), tasks = openTasks();
+  const originalQ = String(q || '');
+  q = originalQ.toLowerCase();
+  const st = stats(), a = adjSummary(), mg = managementStatus(), fm = formalStatus(), tasks = openTasks(), h = healthScore();
   let ans = '';
-  if (q.includes('accountant need') || q.includes('owner') || q.includes('clarification')) {
+  if (role() === 'owner') {
+    if (q.includes('cash')) {
+      ans = `Cash position: ${money(a.closing)}\n\nInflows: ${money(a.inflows)}\nOutflows: ${money(a.outflows)}\nNet movement: ${money(a.net)}\n\nReliability: ${fm.tone === 'good' ? 'accountant-certified' : mg.tone !== 'warn' ? 'management-ready with accounting certification status shown' : 'accountant team preparing'}\n\nLimitations: current demo is based on imported March-May management cash-flow data, not a full Serbian ledger yet.`;
+    } else if (q.includes('financial') || q.includes('report')) {
+      ans = `Financial summary for ${label()}:\nInflows: ${money(a.inflows)}\nOutflows: ${money(a.outflows)}\nNet movement: ${money(a.net)}\nClosing cash: ${money(a.closing)}\n\nReport status: ${mg.label}. Accounting status: ${fm.label}.\n\nA full P&L, balance sheet, and statutory Serbian reporting pack will require ledger posting, Serbian konto certification, tax treatment, and period lock.`;
+    } else if (q.includes('health')) {
+      ans = `Company health: ${h.label} (${h.score}/100).\n\nMain signals used: cash movement, closing cash, data quality, management readiness, and accountant certification status.\n\nThis is an owner-friendly health check. Future versions should add receivables, payables, debt, contracts, tax exposure and runway.`;
+    } else if (q.includes('tax')) {
+      const p = companyProfile();
+      ans = `Tax report status is accountant-prepared.\n\nPDV status: ${p.pdv_status || 'not configured'}\nSEF/e-faktura: ${p.sef_status || 'not configured'}\nFiscalization: ${p.fiscalization_status || 'not configured'}\nPayroll: ${p.payroll_required || 'not configured'}\n\nLimitations: this demo does not file or calculate final Serbian taxes. It prepares the structure for accountant-reviewed tax reports.`;
+    } else if (q.includes('model') || q.includes('forecast') || q.includes('available')) {
+      ans = `Planned AI models and analytical reports:\n- Cash flow forecast\n- Scenario simulator\n- Expense anomaly detection\n- Revenue/expense prediction\n- Tax exposure estimate\n- Portfolio benchmarking later\n\nRule: models should use management-ready or accountant-certified data only, never raw unreviewed data.`;
+    } else {
+      ans = `What you should know today:\n\nCash shown: ${money(a.closing)}\nNet cash movement: ${money(a.net)}\nCompany health: ${h.label} (${h.score}/100)\nBusiness report status: ${mg.label}\nAccounting status: ${fm.label}\n\nNo owner task queue is shown in this finished owner view. Company setup, mapping, review, Serbian konta, and certification are handled by the accountant side.\n\nLimitations: this is still browser-local demo data, not PostgreSQL or a full ledger yet.`;
+    }
+  } else if (q.includes('accountant need') || q.includes('owner') || q.includes('clarification')) {
     ans = `Open owner clarification tasks: ${tasks.length}\n\n${tasks.slice(0, 8).map(t => `- ${t.period} ${t.review_item_id}: ${t.question}`).join('\n') || 'No owner clarification tasks are currently open.'}\n\nLimitation: this is browser-local demo state.`;
   } else if (q.includes('business') || q.includes('management')) {
     ans = `Management status: ${mg.label}\n${mg.detail}\n\nAdjusted closing cash: ${money(a.closing)}\nManagement blockers: ${st.management_blocking}\n\nAccountant certification status: ${fm.label}\n${fm.detail}\n\nUse this data for management dashboards only when labelled management-ready. Formal accounting use requires accountant certification.`;
@@ -1277,7 +1436,13 @@ function ask(q) {
   }
   document.getElementById('answer').textContent = ans;
 }
+
 function renderReports() {
+  if (role() === 'owner') {
+    const links = DATA.months.map(m => `<div class="step"><div class="num">PDF</div><div><strong>${m.label} published import review report</strong><div class="muted">Prepared by the accountant workflow. Technical review workbooks stay on the accountant side.</div></div><a class="btn primary" href="${m.summary.pdf_report}" target="_blank">Open PDF</a></div>`).join('');
+    document.getElementById('reports').innerHTML = `<div class="card owner-page-hero"><div><div class="portal-tag">Owner documents</div><h2>Documents & Published Reports</h2><p class="muted">Owner-facing report evidence. The accountant workbench keeps the technical review files, mappings and source checks.</p></div>${reportStatusPill()}</div><div class="timeline">${links}</div><div class="card inner"><h3>Future owner report library</h3><p class="muted">Quarterly financial pack, tax report pack, company health report, cash forecast report, contract obligation report, and AI analytics report will appear here when generated.</p></div>`;
+    return;
+  }
   const links = DATA.months.map(m => `<div class="step"><div class="num">PDF</div><div><strong>${m.label} report</strong><div class="muted">Human review report generated from the import package.</div></div><a class="btn primary" href="${m.summary.pdf_report}" target="_blank">Open PDF</a></div><div class="step"><div class="num">XLSX</div><div><strong>${m.label} generated review workbook</strong><div class="muted">Structured workbook with transactions, mappings, validation results, and review queue.</div></div><a class="btn" href="${reviewWorkbookPath(m.period)}" target="_blank">Open workbook</a></div>`).join('');
   document.getElementById('reports').innerHTML = `<div class="card"><h2>Reports and source evidence files</h2><p class="muted">These generated files support manual checking. The production version will also open the private original Excel workbook from secure storage.</p><div class="timeline">${links}</div></div>`;
 }

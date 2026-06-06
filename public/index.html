@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ask Your Business - Streamlined UI Framework</title>
+  <title>Ask Your Business - Owner Command Center</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -13,7 +13,7 @@
         <div class="brand-mark">◇</div>
         <div>
           <div class="brand-title">Ask Your Business</div>
-          <div class="brand-subtitle">Finance command center</div>
+          <div class="brand-subtitle">Owner command center</div>
         </div>
       </div>
 
@@ -39,14 +39,18 @@
       </div>
 
       <nav class="tabs side-nav" aria-label="Application navigation">
-        <div class="nav-group-label" data-group-label="setup">Setup</div>
-        <button class="tab" data-group="setup" data-section="setup"><span>Company Setup</span><small>Serbian profile</small></button>
-
         <div class="nav-group-label" data-group-label="owner">Owner workspace</div>
-        <button class="tab" data-group="owner" data-section="owner"><span>Owner Portal</span><small>Simple business view</small></button>
-        <button class="tab" data-group="owner" data-section="certified"><span>Certified Data</span><small>Usable dataset</small></button>
-        <button class="tab" data-group="owner" data-section="assistant"><span>Assistant</span><small>No-guess answers</small></button>
-        <button class="tab" data-group="owner" data-section="reports"><span>Reports</span><small>PDF evidence</small></button>
+        <button class="tab" data-group="owner" data-section="owner"><span>Owner Home</span><small>Finished dashboard</small></button>
+        <button class="tab" data-group="owner" data-section="cash"><span>Cash & Obligations</span><small>Liquidity view</small></button>
+        <button class="tab" data-group="owner" data-section="financials"><span>Financial Reports</span><small>Monthly & quarterly</small></button>
+        <button class="tab" data-group="owner" data-section="tax"><span>Tax Reports</span><small>Accountant prepared</small></button>
+        <button class="tab" data-group="owner" data-section="health"><span>Company Health</span><small>Risk & performance</small></button>
+        <button class="tab" data-group="owner" data-section="models"><span>AI Models</span><small>Coming analysis lab</small></button>
+        <button class="tab" data-group="owner" data-section="assistant"><span>AI Assistant</span><small>Ask your business</small></button>
+        <button class="tab" data-group="owner" data-section="reports"><span>Documents</span><small>Published reports</small></button>
+
+        <div class="nav-group-label" data-group-label="setup">Accountant setup</div>
+        <button class="tab" data-group="setup" data-section="setup"><span>Company Setup</span><small>Accountant only</small></button>
 
         <div class="nav-group-label" data-group-label="accountant">Accountant operations</div>
         <button class="tab" data-group="accountant" data-section="accountant"><span>Operations Center</span><small>Backlog & status</small></button>
@@ -72,9 +76,9 @@
     <div class="main-shell">
       <header class="topbar">
         <div>
-          <div class="eyebrow">Streamlined UI framework v1.5</div>
+          <div class="eyebrow">Owner Command Center v1.6</div>
           <h1 id="pageTitle">Ask Your Business</h1>
-          <p id="pageSub">Cleaner owner/accountant workspace built on the existing import, review, Serbian COA, and readiness workflow.</p>
+          <p id="pageSub">Finished owner-facing command center with accountant-run setup, review, certification, reports, tax status, health, cash, AI assistant, and future modeling workspace.</p>
         </div>
         <div class="top-actions">
           <span class="badge soft">Browser demo</span>
@@ -87,6 +91,11 @@
 
         <section id="setup" class="section"></section>
         <section id="owner" class="section"></section>
+        <section id="cash" class="section"></section>
+        <section id="financials" class="section"></section>
+        <section id="tax" class="section"></section>
+        <section id="health" class="section"></section>
+        <section id="models" class="section"></section>
         <section id="accountant" class="section"></section>
         <section id="shared" class="section"></section>
         <section id="certified" class="section"></section>
