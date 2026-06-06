@@ -3,76 +3,117 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ask Your Business - Period Readiness & Certification Checklist</title>
+  <title>Ask Your Business - Streamlined UI Framework</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-<header>
-  <div class="brand">
-    <div>
-      <h1>Ask Your Business - Period Readiness & Certification Checklist v1.4</h1>
-      <div class="subtitle">Adds a period readiness checklist before management-ready and accountant-certified status: setup gate, review blockers, Serbian konto/posting/tax completion, owner questions, source controls, and exportable certification packs.</div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-card">
+        <div class="brand-mark">◇</div>
+        <div>
+          <div class="brand-title">Ask Your Business</div>
+          <div class="brand-subtitle">Finance command center</div>
+        </div>
+      </div>
+
+      <div class="side-status">
+        <span class="status-dot"></span>
+        <span id="badge">Loading...</span>
+      </div>
+
+      <div class="side-block">
+        <div class="side-label">Workspace</div>
+        <div class="workspace-switch">
+          <button class="btn rolebtn" data-role="owner">Owner</button>
+          <button class="btn rolebtn" data-role="accountant">Accountant</button>
+        </div>
+        <div class="workspace-caption" id="roleLabel">Loading role...</div>
+        <p class="sidebar-help" id="roleExplain">Demo role toggle only. Real permissions come later.</p>
+      </div>
+
+      <div class="side-block">
+        <div class="side-label">Period scope</div>
+        <select id="monthSelect" class="month-select"></select>
+        <p class="sidebar-help">Choose all months for portfolio/work queue views, or one month for certification.</p>
+      </div>
+
+      <nav class="tabs side-nav" aria-label="Application navigation">
+        <div class="nav-group-label" data-group-label="setup">Setup</div>
+        <button class="tab" data-group="setup" data-section="setup"><span>Company Setup</span><small>Serbian profile</small></button>
+
+        <div class="nav-group-label" data-group-label="owner">Owner workspace</div>
+        <button class="tab" data-group="owner" data-section="owner"><span>Owner Portal</span><small>Simple business view</small></button>
+        <button class="tab" data-group="owner" data-section="certified"><span>Certified Data</span><small>Usable dataset</small></button>
+        <button class="tab" data-group="owner" data-section="assistant"><span>Assistant</span><small>No-guess answers</small></button>
+        <button class="tab" data-group="owner" data-section="reports"><span>Reports</span><small>PDF evidence</small></button>
+
+        <div class="nav-group-label" data-group-label="accountant">Accountant operations</div>
+        <button class="tab" data-group="accountant" data-section="accountant"><span>Operations Center</span><small>Backlog & status</small></button>
+        <button class="tab" data-group="accountant" data-section="readiness"><span>Period Readiness</span><small>Certification gates</small></button>
+        <button class="tab" data-group="accountant" data-section="review"><span>Review Center</span><small>Exceptions</small></button>
+        <button class="tab" data-group="accountant" data-section="transactions"><span>Transactions</span><small>Working rows</small></button>
+        <button class="tab" data-group="accountant" data-section="mapping"><span>Mapping</span><small>Category rules</small></button>
+        <button class="tab" data-group="accountant" data-section="coa"><span>Serbian COA</span><small>Konto dictionary</small></button>
+        <button class="tab" data-group="accountant" data-section="validation"><span>Validation</span><small>Controls</small></button>
+        <button class="tab" data-group="accountant" data-section="certification"><span>Certification</span><small>Batch status</small></button>
+
+        <div class="nav-group-label" data-group-label="shared">Shared</div>
+        <button class="tab" data-group="shared" data-section="shared"><span>Shared Workspace</span><small>Owner ↔ accountant</small></button>
+        <button class="tab" data-group="shared" data-section="overview"><span>Technical Overview</span><small>Developer detail</small></button>
+      </nav>
+
+      <div class="side-footer">
+        <div class="mini-title">Demo storage</div>
+        <p>Browser-local only. Export packages before clearing data or switching computers.</p>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Streamlined UI framework v1.5</div>
+          <h1 id="pageTitle">Ask Your Business</h1>
+          <p id="pageSub">Cleaner owner/accountant workspace built on the existing import, review, Serbian COA, and readiness workflow.</p>
+        </div>
+        <div class="top-actions">
+          <span class="badge soft">Browser demo</span>
+          <span class="badge soft">No database yet</span>
+        </div>
+      </header>
+
+      <main class="wrap">
+        <div class="notice storage-notice"><strong>Demo storage warning:</strong> review decisions, setup, mappings, and certification status are saved in this browser only. Export a certified package or accountant review pack before clearing browser data.</div>
+
+        <section id="setup" class="section"></section>
+        <section id="owner" class="section"></section>
+        <section id="accountant" class="section"></section>
+        <section id="shared" class="section"></section>
+        <section id="certified" class="section"></section>
+        <section id="readiness" class="section"></section>
+        <section id="overview" class="section"></section>
+        <section id="review" class="section"></section>
+        <section id="transactions" class="section"></section>
+        <section id="mapping" class="section"></section>
+        <section id="coa" class="section"></section>
+        <section id="validation" class="section"></section>
+        <section id="certification" class="section"></section>
+        <section id="assistant" class="section"></section>
+        <section id="reports" class="section"></section>
+      </main>
     </div>
-    <div class="badge" id="badge">Loading...</div>
   </div>
-</header>
-<main class="wrap">
-  <div class="notice">Demo storage warning: review decisions are saved in this browser only. Use <strong>Export certified package</strong> or <strong>Export accountant review pack</strong> before clearing browser data or switching computers.</div>
-  <div class="selector role-toggle">
-    <strong>Workspace:</strong>
-    <button class="btn rolebtn" data-role="owner">Owner Portal</button>
-    <button class="btn rolebtn" data-role="accountant">Accountant Operations</button>
-    <span class="badge" id="roleLabel">Loading role...</span>
-    <span class="mini" id="roleExplain">Demo role toggle only. Real login and permissions come later with PostgreSQL/authentication.</span>
-  </div>
-  <div class="selector">
-    <strong>Month view:</strong>
-    <select id="monthSelect"></select>
-    <span class="mini">Use “All months” for the whole queue, or choose one month for batch certification.</span>
-  </div>
-  <nav class="tabs">
-    <button class="tab active" data-section="setup">Company Setup</button>
-    <button class="tab" data-section="owner">Owner Portal</button>
-    <button class="tab" data-section="accountant">Accountant Operations</button>
-    <button class="tab" data-section="shared">Shared Workspace</button>
-    <button class="tab" data-section="certified">Certified Data</button>
-    <button class="tab" data-section="readiness">Period Readiness</button>
-    <button class="tab" data-section="overview">Technical Overview</button>
-    <button class="tab" data-section="review">Review Center</button>
-    <button class="tab" data-section="transactions">Transactions</button>
-    <button class="tab" data-section="mapping">Mapping</button>
-    <button class="tab" data-section="coa">Serbian COA</button>
-    <button class="tab" data-section="validation">Validation</button>
-    <button class="tab" data-section="certification">Certification</button>
-    <button class="tab" data-section="assistant">Assistant</button>
-    <button class="tab" data-section="reports">Reports</button>
-  </nav>
-  <section id="setup" class="section active"></section>
-  <section id="owner" class="section"></section>
-  <section id="accountant" class="section"></section>
-  <section id="shared" class="section"></section>
-  <section id="certified" class="section"></section>
-  <section id="readiness" class="section"></section>
-  <section id="overview" class="section"></section>
-  <section id="review" class="section"></section>
-  <section id="transactions" class="section"></section>
-  <section id="mapping" class="section"></section>
-  <section id="coa" class="section"></section>
-  <section id="validation" class="section"></section>
-  <section id="certification" class="section"></section>
-  <section id="assistant" class="section"></section>
-  <section id="reports" class="section"></section>
-</main>
-<div class="modal-backdrop" id="reviewModal">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div class="modal-head">
-      <div><h2 id="modalTitle">Review item</h2><div class="muted" id="modalSubtitle"></div></div>
-      <button class="xbtn" onclick="closeModal()">×</button>
+
+  <div class="modal-backdrop" id="reviewModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div><h2 id="modalTitle">Review item</h2><div class="muted" id="modalSubtitle"></div></div>
+        <button class="xbtn" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
     </div>
-    <div class="modal-body" id="modalBody"></div>
   </div>
-</div>
-<script src="/serbian_config.js"></script>
-<script src="/app.js"></script>
+  <script src="/serbian_config.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>
